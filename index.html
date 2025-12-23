@@ -2,19 +2,62 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/webp" href="/logo.webp" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#FDFBF7" />
     <title>Oblepiha VPN</title>
-    <!-- Fonts -->
+    
+    <!-- Preload шрифтов для быстрой загрузки -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <!-- Material Symbols -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    
     <!-- Telegram WebApp -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Стили лоадера (инлайн для мгновенного показа) -->
+    <style>
+      #loader {
+        position: fixed;
+        inset: 0;
+        background: #FDFBF7;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.3s ease-out;
+      }
+      #loader.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #loader img {
+        width: 80px;
+        height: 80px;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      #loader span {
+        margin-top: 16px;
+        font-family: 'Work Sans', system-ui, sans-serif;
+        font-size: 14px;
+        color: #3E2723;
+        opacity: 0.6;
+      }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(0.95); opacity: 0.8; }
+      }
+    </style>
   </head>
   <body>
+    <!-- Лоадер показывается сразу, пока загружается React -->
+    <div id="loader">
+      <img src="/logo.webp" alt="Облепиха VPN" />
+      <span>Загрузка...</span>
+    </div>
+    
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
