@@ -13,7 +13,7 @@ export function Header({ firstName }: HeaderProps) {
           className="h-11 w-auto"
         />
         <span className="text-chocolate text-base font-bold tracking-tight">
-          Облепиха VPN
+          ГОВНО VPN
         </span>
       </div>
       
