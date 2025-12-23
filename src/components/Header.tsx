@@ -1,7 +1,7 @@
 interface HeaderProps {
   firstName: string
 }
-// Шапка
+
 export function Header({ firstName }: HeaderProps) {
   return (
     <header className="flex flex-col mb-4">
