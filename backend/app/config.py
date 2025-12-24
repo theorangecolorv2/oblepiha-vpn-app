@@ -42,7 +42,8 @@ class Settings(BaseSettings):
     # YooKassa
     yookassa_shop_id: str
     yookassa_secret_key: str
-    yookassa_return_url: str = "https://t.me/oblepiha_bot"
+    # Используем ссылку на Mini App (формат: https://t.me/bot_username/app_shortname)
+    yookassa_return_url: str = "https://t.me/oblepiha_bot/app"
 
     # Frontend
     frontend_url: str = "https://oblepiha-app.ru"

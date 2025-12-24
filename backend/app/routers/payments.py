@@ -144,9 +144,30 @@ async def yookassa_webhook(
         )
         user = user_result.scalar_one_or_none()
         
-        if user and user.remnawave_uuid:
+        if not user:
+            logger.error(f"User not found for payment: user_id={payment.user_id}")
+            await db.commit()
+            return {"status": "ok"}
+        
+        logger.info(f"Found user: telegram_id={user.telegram_id}, remnawave_uuid={user.remnawave_uuid}")
+        
+        remnawave = get_remnawave_service()
+        
+        # Если нет remnawave_uuid - пробуем найти по telegram_id
+        if not user.remnawave_uuid:
+            logger.warning(f"No remnawave_uuid for user {user.telegram_id}, trying to find by telegram_id")
             try:
-                remnawave = get_remnawave_service()
+                remnawave_user = await remnawave.get_user_by_telegram_id(user.telegram_id)
+                if remnawave_user:
+                    user.remnawave_uuid = remnawave_user.get("uuid")
+                    logger.info(f"Found remnawave user: {user.remnawave_uuid}")
+                else:
+                    logger.error(f"Remnawave user not found for telegram_id={user.telegram_id}")
+            except RemnawaveError as e:
+                logger.error(f"Failed to find Remnawave user: {e}")
+        
+        if user.remnawave_uuid:
+            try:
                 await remnawave.update_user_expiration(
                     uuid=user.remnawave_uuid,
                     days_to_add=payment.days,
@@ -163,6 +184,8 @@ async def yookassa_webhook(
                 logger.error(f"Failed to extend subscription in Remnawave: {e}")
                 # Платёж прошёл, но Remnawave не обновился
                 # Нужно будет обработать вручную или через retry
+        else:
+            logger.error(f"Cannot extend subscription: no remnawave_uuid for user {user.telegram_id}")
     
     await db.commit()
     
