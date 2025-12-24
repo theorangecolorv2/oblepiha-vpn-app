@@ -20,6 +20,7 @@ from app.models.payment import Payment
 from app.schemas.payment import PaymentCreate, PaymentResponse, PaymentHistoryItem
 from app.services.remnawave import get_remnawave_service, RemnawaveError
 from app.services.yookassa_service import get_yookassa_service
+from app.services.telegram_notify import send_payment_success_message
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/payments", tags=["payments"])
@@ -207,6 +208,13 @@ async def yookassa_webhook(
                 
                 logger.info(
                     f"Subscription extended: user={user.telegram_id}, days={payment.days}"
+                )
+                
+                # Отправляем уведомление пользователю
+                await send_payment_success_message(
+                    telegram_id=user.telegram_id,
+                    days=payment.days,
+                    tariff_name=payment.tariff_name,
                 )
                 
             except RemnawaveError as e:
