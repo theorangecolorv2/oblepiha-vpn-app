@@ -18,6 +18,9 @@ pydantic-settings==2.7.0
 # YooKassa payments
 yookassa==3.4.0
 
+# Telegram Bot
+aiogram==3.17.0
+
 # Telegram initData validation
 python-dateutil==2.9.0
 

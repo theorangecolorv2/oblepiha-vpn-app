@@ -49,8 +49,9 @@ class Settings(BaseSettings):
     # YooKassa
     yookassa_shop_id: str
     yookassa_secret_key: str
-    # Используем ссылку на Mini App (формат: https://t.me/bot_username/app_shortname)
-    yookassa_return_url: str = "https://t.me/oblepiha_bot/app"
+    # Редирект после оплаты - открывает чат с ботом
+    # ?start=payment_success позволяет боту обработать возврат после оплаты
+    yookassa_return_url: str = "https://t.me/oblepiha_bot?start=payment_success"
 
     # Frontend
     frontend_url: str = "https://oblepiha-app.ru"

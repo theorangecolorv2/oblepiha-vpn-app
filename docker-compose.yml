@@ -29,3 +29,15 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  bot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: oblepiha-bot
+    command: python run_bot.py
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
