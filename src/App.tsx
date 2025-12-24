@@ -20,13 +20,11 @@ function App() {
   const userStats = stats ? {
     isActive: stats.isActive,
     daysLeft: stats.daysLeft,
-    totalDays: stats.totalDays,
     trafficLeftGb: stats.trafficLeftGb,
     totalTrafficGb: stats.totalTrafficGb,
   } : {
     isActive: false,
     daysLeft: 0,
-    totalDays: 30,
     trafficLeftGb: 0,
     totalTrafficGb: 500,
   }

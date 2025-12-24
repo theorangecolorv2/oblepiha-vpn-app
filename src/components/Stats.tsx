@@ -1,12 +1,11 @@
 interface StatsProps {
   isActive: boolean
   daysLeft: number
-  totalDays: number
   trafficLeftGb: number
   totalTrafficGb: number
 }
 
-export function Stats({ isActive, daysLeft, totalDays, trafficLeftGb, totalTrafficGb }: StatsProps) {
+export function Stats({ isActive, daysLeft, trafficLeftGb, totalTrafficGb }: StatsProps) {
   return (
     <section className="mb-5">
       <div className="w-full bg-surface-light rounded-2xl p-4 shadow-soft grid grid-cols-3 divide-x divide-chocolate/10">
