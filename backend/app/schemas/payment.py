@@ -5,7 +5,8 @@ Pydantic схемы для платежей.
 from datetime import datetime
 from typing import Optional, Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 
 
 class PaymentCreate(BaseModel):
@@ -15,6 +16,12 @@ class PaymentCreate(BaseModel):
 
 class PaymentResponse(BaseModel):
     """Ответ при создании платежа"""
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        by_alias=True,  # Сериализовать в camelCase
+    )
+    
     payment_id: str
     confirmation_url: str
     amount: int
@@ -24,6 +31,13 @@ class PaymentResponse(BaseModel):
 
 class PaymentStatusResponse(BaseModel):
     """Статус платежа"""
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        by_alias=True,
+        from_attributes=True,
+    )
+    
     id: int
     status: str
     tariff_id: str
@@ -32,10 +46,6 @@ class PaymentStatusResponse(BaseModel):
     days: int
     created_at: datetime
     paid_at: Optional[datetime] = None
-    
-    model_config = {
-        "from_attributes": True
-    }
 
 
 class PaymentWebhook(BaseModel):
@@ -47,6 +57,13 @@ class PaymentWebhook(BaseModel):
 
 class PaymentHistoryItem(BaseModel):
     """Элемент истории платежей"""
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        by_alias=True,
+        from_attributes=True,
+    )
+    
     id: int
     tariff_name: str
     amount: int
@@ -54,8 +71,4 @@ class PaymentHistoryItem(BaseModel):
     status: str
     created_at: datetime
     paid_at: Optional[datetime] = None
-    
-    model_config = {
-        "from_attributes": True
-    }
 

@@ -5,7 +5,16 @@ Pydantic схемы для пользователей.
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
+
+
+# Базовый конфиг для camelCase сериализации
+camel_config = ConfigDict(
+    alias_generator=to_camel,
+    populate_by_name=True,
+    by_alias=True,
+)
 
 
 class UserFromTelegram(BaseModel):
@@ -28,6 +37,13 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     """Ответ с данными пользователя"""
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        by_alias=True,
+        from_attributes=True,
+    )
+    
     id: int
     telegram_id: int
     telegram_username: Optional[str] = None
@@ -47,14 +63,12 @@ class UserResponse(BaseModel):
     
     # Реферальная система
     referral_code: Optional[str] = None
-    
-    model_config = {
-        "from_attributes": True
-    }
 
 
 class UserStatsResponse(BaseModel):
     """Статистика пользователя для главного экрана"""
+    model_config = camel_config
+    
     is_active: bool = False
     days_left: int = 0
     total_days: int = 30
