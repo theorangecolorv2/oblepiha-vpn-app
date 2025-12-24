@@ -76,6 +76,12 @@ async def health():
     return {"status": "healthy"}
 
 
+@app.get("/api/ping")
+async def ping():
+    """Простой ping для проверки связи frontend → backend через Caddy"""
+    return {"pong": True, "service": "oblepiha-backend"}
+
+
 if __name__ == "__main__":
     import uvicorn
     

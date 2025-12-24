@@ -57,6 +57,10 @@ async function apiFetch<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const initData = getInitData()
+  const url = `${config.apiUrl}${endpoint}`
+  
+  console.log('[API] Request:', options.method || 'GET', url)
+  console.log('[API] Has initData:', !!initData, initData ? `(${initData.length} chars)` : '')
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -65,22 +69,34 @@ async function apiFetch<T>(
   // Добавляем initData в заголовок для авторизации
   if (initData) {
     headers['X-Telegram-Init-Data'] = initData
+  } else {
+    console.warn('[API] No Telegram initData available - request may fail auth')
   }
   
-  const response = await fetch(`${config.apiUrl}${endpoint}`, {
-    ...options,
-    headers: {
-      ...headers,
-      ...(options.headers as Record<string, string> || {}),
-    },
-  })
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
-    throw new Error(error.detail || `HTTP ${response.status}`)
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...headers,
+        ...(options.headers as Record<string, string> || {}),
+      },
+    })
+    
+    console.log('[API] Response status:', response.status)
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+      console.error('[API] Error response:', error)
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+    
+    const data = await response.json()
+    console.log('[API] Response data:', data)
+    return data
+  } catch (err) {
+    console.error('[API] Fetch error:', err)
+    throw err
   }
-  
-  return response.json()
 }
 
 /**

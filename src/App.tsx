@@ -31,25 +31,42 @@ function App() {
     totalTrafficGb: 200,
   }
 
+  // Состояние для ошибки платежа
+  const [paymentError, setPaymentError] = useState<string | null>(null)
+
   // Обработка оплаты
   const handlePayment = async () => {
-    if (!selectedTariff) return
+    console.log('[Payment] Button clicked, selectedTariff:', selectedTariff)
+    
+    if (!selectedTariff) {
+      console.warn('[Payment] No tariff selected')
+      return
+    }
     
     setIsPaymentLoading(true)
+    setPaymentError(null)
     
     try {
+      console.log('[Payment] Creating payment for tariff:', selectedTariff.id)
       const confirmationUrl = await createPayment(selectedTariff.id)
+      console.log('[Payment] Got confirmation URL:', confirmationUrl)
       
       if (confirmationUrl) {
         // Открываем страницу оплаты
         if (tg?.openLink) {
+          console.log('[Payment] Opening via Telegram')
           tg.openLink(confirmationUrl)
         } else {
+          console.log('[Payment] Opening via window.open')
           window.open(confirmationUrl, '_blank')
         }
+      } else {
+        console.error('[Payment] No confirmation URL received')
+        setPaymentError('Не удалось создать платёж. Попробуйте ещё раз.')
       }
     } catch (err) {
-      console.error('Payment error:', err)
+      console.error('[Payment] Error:', err)
+      setPaymentError(err instanceof Error ? err.message : 'Ошибка при создании платежа')
     } finally {
       setIsPaymentLoading(false)
     }
@@ -116,6 +133,13 @@ function App() {
                   />
                 ))}
               </div>
+              
+              {/* Ошибка платежа */}
+              {paymentError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                  <p className="text-red-600 text-sm">{paymentError}</p>
+                </div>
+              )}
               
               {/* Кнопка оплаты */}
               <div className="mt-5">

@@ -75,13 +75,16 @@ export function useUser(): UseUserReturn {
 
   // Создать платёж
   const createPayment = useCallback(async (tariffId: string): Promise<string | null> => {
+    console.log('[useUser] createPayment called with tariffId:', tariffId)
     try {
       const payment = await api.createPayment(tariffId)
+      console.log('[useUser] Payment created:', payment)
       return payment.confirmationUrl
     } catch (err) {
-      console.error('Failed to create payment:', err)
-      setError(err instanceof Error ? err.message : 'Ошибка создания платежа')
-      return null
+      console.error('[useUser] Failed to create payment:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Ошибка создания платежа'
+      setError(errorMessage)
+      throw err // Пробрасываем ошибку наверх для обработки в handlePayment
     }
   }, [])
 

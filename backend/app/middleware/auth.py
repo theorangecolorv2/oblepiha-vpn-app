@@ -31,6 +31,8 @@ async def get_current_user(
     """
     settings = get_settings()
     
+    logger.debug(f"Auth: received initData length={len(x_telegram_init_data) if x_telegram_init_data else 0}")
+    
     # В dev режиме разрешаем без валидации (для тестирования)
     if settings.debug and not x_telegram_init_data:
         logger.warning("Debug mode: using test user")
@@ -42,6 +44,7 @@ async def get_current_user(
         )
     
     if not x_telegram_init_data:
+        logger.warning("Auth failed: Missing X-Telegram-Init-Data header")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing X-Telegram-Init-Data header",

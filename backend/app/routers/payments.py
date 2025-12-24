@@ -35,6 +35,7 @@ async def create_payment(
     Создать платёж для покупки тарифа.
     Возвращает URL для оплаты через YooKassa.
     """
+    logger.info(f"Creating payment: tariff_id={payment_data.tariff_id}, user_id={telegram_user.id}")
     yookassa = get_yookassa_service()
     
     # Проверяем тариф
