@@ -2,8 +2,8 @@
 // В продакшене эти значения берутся из переменных окружения (import.meta.env)
 
 export const config = {
-  // API бэкенда (на том же домене, другой порт в dev, /api в prod)
-  apiUrl: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : 'https://oblepiha-app.ru/api'),
+  // API бэкенда (на том же домене, Caddy проксирует /api/* на бэкенд)
+  apiUrl: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : 'https://oblepiha-app.ru'),
   
   // Режим разработки - показывать тестовые данные если нет Telegram
   devMode: import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV,
