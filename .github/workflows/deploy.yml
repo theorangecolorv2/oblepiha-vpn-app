@@ -17,5 +17,23 @@ jobs:
           script: |
             cd /opt/oblepiha-vpn-app
             git pull origin main
+            
+            # Проверяем что .env для бэкенда существует
+            if [ ! -f backend/.env ]; then
+              echo "ERROR: backend/.env not found!"
+              echo "Copy backend/env.example to backend/.env and fill in the values"
+              exit 1
+            fi
+            
+            # Пересобираем и запускаем контейнеры
             docker compose up -d --build
-
+            
+            # Ждём запуска и проверяем здоровье
+            echo "Waiting for services to start..."
+            sleep 10
+            
+            # Проверяем frontend
+            curl -sf http://localhost:3000 > /dev/null && echo "✓ Frontend OK" || echo "✗ Frontend FAILED"
+            
+            # Проверяем backend
+            curl -sf http://localhost:8000/health > /dev/null && echo "✓ Backend OK" || echo "✗ Backend FAILED"

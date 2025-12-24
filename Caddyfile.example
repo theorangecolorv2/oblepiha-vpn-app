@@ -1,0 +1,20 @@
+# Caddyfile для Oblepiha VPN Mini App
+# Предполагается что frontend на порту 3000, backend на 8000
+
+oblepiha-app.ru {
+    # Frontend (статика)
+    handle {
+        reverse_proxy localhost:3000
+    }
+
+    # Backend API
+    handle /api/* {
+        reverse_proxy localhost:8000
+    }
+
+    # YooKassa webhook (без авторизации Telegram)
+    handle /api/payments/webhook {
+        reverse_proxy localhost:8000
+    }
+}
+

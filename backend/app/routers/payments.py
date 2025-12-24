@@ -1,0 +1,237 @@
+"""
+API для платежей.
+Создание платежей, webhook от YooKassa, история.
+"""
+
+import json
+import logging
+from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Header
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import get_tariff_by_id
+from app.database import get_db
+from app.middleware.auth import get_current_user, TelegramUser
+from app.models.user import User
+from app.models.payment import Payment
+from app.schemas.payment import PaymentCreate, PaymentResponse, PaymentHistoryItem
+from app.services.remnawave import get_remnawave_service, RemnawaveError
+from app.services.yookassa_service import get_yookassa_service
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/api/payments", tags=["payments"])
+
+
+@router.post("", response_model=PaymentResponse)
+async def create_payment(
+    payment_data: PaymentCreate,
+    telegram_user: TelegramUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Создать платёж для покупки тарифа.
+    Возвращает URL для оплаты через YooKassa.
+    """
+    yookassa = get_yookassa_service()
+    
+    # Проверяем тариф
+    tariff = get_tariff_by_id(payment_data.tariff_id)
+    if not tariff:
+        raise HTTPException(status_code=400, detail="Invalid tariff_id")
+    
+    # Получаем пользователя из БД
+    result = await db.execute(
+        select(User).where(User.telegram_id == telegram_user.id)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found. Call /api/users/me first")
+    
+    # Создаём платёж в YooKassa
+    yookassa_payment = yookassa.create_payment(
+        tariff_id=payment_data.tariff_id,
+        telegram_id=telegram_user.id,
+        user_id=user.id,
+    )
+    
+    if not yookassa_payment:
+        raise HTTPException(status_code=500, detail="Failed to create payment")
+    
+    # Сохраняем платёж в БД
+    payment = Payment(
+        user_id=user.id,
+        telegram_id=telegram_user.id,
+        tariff_id=payment_data.tariff_id,
+        tariff_name=tariff["name"],
+        amount=tariff["price"] * 100,  # В копейках
+        days=tariff["days"],
+        yookassa_payment_id=yookassa_payment.id,
+        status="pending",
+        metadata_json=json.dumps({
+            "yookassa_status": yookassa_payment.status,
+        }),
+    )
+    db.add(payment)
+    await db.commit()
+    
+    # Получаем URL для оплаты
+    confirmation_url = yookassa_payment.confirmation.confirmation_url
+    
+    return PaymentResponse(
+        payment_id=yookassa_payment.id,
+        confirmation_url=confirmation_url,
+        amount=tariff["price"],
+        tariff_id=tariff["id"],
+        tariff_name=tariff["name"],
+    )
+
+
+@router.post("/webhook")
+async def yookassa_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Webhook для обработки уведомлений от YooKassa.
+    
+    YooKassa отправляет уведомления о изменении статуса платежа.
+    При успешной оплате продлеваем подписку в Remnawave.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    
+    logger.info(f"YooKassa webhook received: {body}")
+    
+    event_type = body.get("event")
+    payment_object = body.get("object", {})
+    payment_id = payment_object.get("id")
+    
+    if not payment_id:
+        raise HTTPException(status_code=400, detail="Missing payment id")
+    
+    # Находим платёж в БД
+    result = await db.execute(
+        select(Payment).where(Payment.yookassa_payment_id == payment_id)
+    )
+    payment = result.scalar_one_or_none()
+    
+    if not payment:
+        logger.warning(f"Payment not found in DB: {payment_id}")
+        return {"status": "ok"}  # Отвечаем OK чтобы YooKassa не повторяла
+    
+    new_status = payment_object.get("status", "unknown")
+    
+    # Обновляем статус платежа
+    payment.status = new_status
+    payment.metadata_json = json.dumps(payment_object)
+    
+    # Если платёж успешен - продлеваем подписку
+    if new_status == "succeeded" and payment_object.get("paid"):
+        logger.info(f"Payment succeeded: {payment_id}, extending subscription")
+        
+        payment.paid_at = datetime.utcnow()
+        
+        # Получаем пользователя
+        user_result = await db.execute(
+            select(User).where(User.id == payment.user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        
+        if user and user.remnawave_uuid:
+            try:
+                remnawave = get_remnawave_service()
+                await remnawave.update_user_expiration(
+                    uuid=user.remnawave_uuid,
+                    days_to_add=payment.days,
+                )
+                
+                # Обновляем статус в локальной БД
+                user.is_active = True
+                
+                logger.info(
+                    f"Subscription extended: user={user.telegram_id}, days={payment.days}"
+                )
+                
+            except RemnawaveError as e:
+                logger.error(f"Failed to extend subscription in Remnawave: {e}")
+                # Платёж прошёл, но Remnawave не обновился
+                # Нужно будет обработать вручную или через retry
+    
+    await db.commit()
+    
+    return {"status": "ok"}
+
+
+@router.get("/history", response_model=list[PaymentHistoryItem])
+async def get_payment_history(
+    telegram_user: TelegramUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    limit: int = 20,
+):
+    """Получить историю платежей пользователя"""
+    result = await db.execute(
+        select(Payment)
+        .where(Payment.telegram_id == telegram_user.id)
+        .order_by(Payment.created_at.desc())
+        .limit(limit)
+    )
+    payments = result.scalars().all()
+    
+    return [
+        PaymentHistoryItem(
+            id=p.id,
+            tariff_name=p.tariff_name,
+            amount=p.amount // 100,  # Из копеек в рубли
+            days=p.days,
+            status=p.status,
+            created_at=p.created_at,
+            paid_at=p.paid_at,
+        )
+        for p in payments
+    ]
+
+
+@router.get("/{payment_id}/status")
+async def get_payment_status(
+    payment_id: str,
+    telegram_user: TelegramUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Проверить статус конкретного платежа"""
+    result = await db.execute(
+        select(Payment)
+        .where(
+            Payment.yookassa_payment_id == payment_id,
+            Payment.telegram_id == telegram_user.id,
+        )
+    )
+    payment = result.scalar_one_or_none()
+    
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    # Также проверяем статус в YooKassa
+    yookassa = get_yookassa_service()
+    yookassa_payment = yookassa.get_payment(payment_id)
+    
+    actual_status = payment.status
+    if yookassa_payment:
+        actual_status = yookassa_payment.status
+        
+        # Обновляем локальный статус если изменился
+        if actual_status != payment.status:
+            payment.status = actual_status
+            await db.commit()
+    
+    return {
+        "payment_id": payment_id,
+        "status": actual_status,
+        "paid": actual_status == "succeeded",
+    }
+

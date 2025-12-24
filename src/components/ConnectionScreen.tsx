@@ -5,8 +5,10 @@ import { STRINGS } from '../constants'
 
 interface ConnectionScreenProps {
   userOS: UserOS
-  // В будущем сюда будет передаваться ключ подписки из API
-  subscriptionKey?: string
+  // URL подписки из API
+  subscriptionUrl?: string | null
+  // Активна ли подписка
+  isActive?: boolean
 }
 
 type OSTab = 'ios' | 'android' | 'windows'
@@ -25,18 +27,9 @@ const getAppConfig = (os: OSTab) => ({
 
 /**
  * Генерирует deep link для автоматического импорта подписки в Happ
- * 
- * Happ поддерживает несколько способов импорта:
- * 1. Прямые ссылки протоколов: vmess://, vless://, trojan://, ss://, socks://
- * 2. Зашифрованные ссылки: happ://crypto... (для скрытия настроек от пользователя)
- * 
- * При клике на такую ссылку, если Happ установлен, он откроется и предложит
- * добавить конфигурацию. На iOS/Android это работает через URL schemes,
- * на Windows - через ассоциацию протоколов.
  */
 function generateDeepLink(subscriptionKey: string): string {
   // Если ключ уже содержит протокол (vmess://, vless://, etc.) - используем его напрямую
-  // Это позволяет Happ автоматически импортировать конфигурацию
   if (subscriptionKey.match(/^(vmess|vless|trojan|ss|socks):\/\//)) {
     return subscriptionKey
   }
@@ -47,31 +40,21 @@ function generateDeepLink(subscriptionKey: string): string {
   }
   
   // Если это обычный URL подписки - оборачиваем в happ:// схему
-  // Формат: happ://add?url=ENCODED_SUBSCRIPTION_URL
   return `happ://add?url=${encodeURIComponent(subscriptionKey)}`
 }
 
-export function ConnectionScreen({ userOS, subscriptionKey }: ConnectionScreenProps) {
+export function ConnectionScreen({ userOS, subscriptionUrl, isActive = false }: ConnectionScreenProps) {
   const [selectedOS, setSelectedOS] = useState<OSTab>(userOS)
   const [copySuccess, setCopySuccess] = useState(false)
   const appConfig = getAppConfig(selectedOS)
   
-  // Используем переданный ключ или тестовый в режиме разработки
-  const currentKey = subscriptionKey || (config.devMode ? DEV_SUBSCRIPTION_KEY : '')
+  // Используем URL подписки или тестовый в режиме разработки
+  const currentKey = subscriptionUrl || (config.devMode ? DEV_SUBSCRIPTION_KEY : '')
 
   const handleDownload = () => {
     window.open(appConfig.downloadUrl, '_blank')
   }
 
-  /**
-   * Автоподключение через deep link
-   * 
-   * Логика работы:
-   * 1. Генерируем deep link с ключом подписки
-   * 2. Пытаемся открыть через window.location (работает на мобильных)
-   * 3. Если Happ установлен - он откроется и импортирует конфигурацию
-   * 4. Если не установлен - показываем страницу скачивания (или ничего не произойдёт)
-   */
   const handleAutoConnect = () => {
     if (!currentKey) {
       console.error(STRINGS.ERROR_NO_SUBSCRIPTION)
@@ -80,13 +63,9 @@ export function ConnectionScreen({ userOS, subscriptionKey }: ConnectionScreenPr
 
     const deepLink = generateDeepLink(currentKey)
     
-    // На мобильных устройствах открываем deep link напрямую
-    // Это откроет Happ если он установлен
     if (selectedOS === 'ios' || selectedOS === 'android') {
       window.location.href = deepLink
     } else {
-      // На десктопе открываем в новом окне
-      // Windows может запросить разрешение на открытие приложения
       window.open(deepLink, '_blank')
     }
   }
@@ -142,6 +121,19 @@ export function ConnectionScreen({ userOS, subscriptionKey }: ConnectionScreenPr
         </div>
       </div>
 
+      {/* Предупреждение если подписка неактивна */}
+      {!isActive && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <span className="material-symbols-outlined text-amber-500 text-xl">warning</span>
+          <div className="flex flex-col gap-1">
+            <span className="font-medium text-amber-800 text-sm">Подписка неактивна</span>
+            <span className="text-xs text-amber-600">
+              Оплатите тариф для доступа к VPN
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Основная карточка настройки */}
       <div className="bg-white rounded-2xl p-5 shadow-soft w-full">
         {/* App Header */}
@@ -193,18 +185,18 @@ export function ConnectionScreen({ userOS, subscriptionKey }: ConnectionScreenPr
               </h3>
               <button 
                 onClick={handleAutoConnect}
-                disabled={!currentKey}
+                disabled={!currentKey || !isActive}
                 className={`
                   w-full h-12 rounded-full flex items-center justify-center gap-2 
                   transition-all duration-200 font-bold text-sm tracking-wide
-                  ${currentKey 
+                  ${currentKey && isActive
                     ? 'bg-primary hover:bg-[#d54d26] active:scale-[0.98] text-white shadow-lg shadow-primary/30' 
                     : 'bg-chocolate/10 text-chocolate/40 cursor-not-allowed'
                   }
                 `}
               >
                 <span>🚀</span>
-                {STRINGS.AUTO_CONNECT}
+                {!isActive ? 'Требуется подписка' : STRINGS.AUTO_CONNECT}
               </button>
             </div>
           </div>
@@ -220,11 +212,11 @@ export function ConnectionScreen({ userOS, subscriptionKey }: ConnectionScreenPr
           {/* Copy Key */}
           <button 
             onClick={handleCopyKey}
-            disabled={!currentKey}
+            disabled={!currentKey || !isActive}
             className={`
               flex-1 bg-white rounded-xl p-3 flex flex-col items-center gap-1.5 
               transition-transform shadow-soft
-              ${currentKey ? 'active:scale-[0.98]' : 'opacity-50 cursor-not-allowed'}
+              ${currentKey && isActive ? 'active:scale-[0.98]' : 'opacity-50 cursor-not-allowed'}
             `}
           >
             <div className={`

@@ -1,16 +1,29 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Header, Stats, TariffCard, Button, BottomNav, ConnectionScreen, ReferralScreen } from './components'
 import { useTelegram } from './hooks/useTelegram'
-import { tariffs } from './data/tariffs'
+import { useUser } from './hooks/useUser'
+import { tariffs as fallbackTariffs } from './data/tariffs'
 import type { Tariff } from './types'
 
 function App() {
-  const { firstName, userOS } = useTelegram()
+  const { firstName, userOS, tg, isReady } = useTelegram()
+  const { isLoading, error, stats, tariffs, createPayment, refreshStats } = useUser()
+  
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null)
   const [activeTab, setActiveTab] = useState<'shop' | 'vpn' | 'friends'>('shop')
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false)
 
-  // TODO: Заменить на данные из API
-  const userStats = {
+  // Используем тарифы с API или fallback
+  const displayTariffs = tariffs.length > 0 ? tariffs : fallbackTariffs
+
+  // Статистика пользователя
+  const userStats = stats ? {
+    isActive: stats.isActive,
+    daysLeft: stats.daysLeft,
+    totalDays: stats.totalDays,
+    trafficLeftGb: stats.trafficLeftGb,
+    totalTrafficGb: stats.totalTrafficGb,
+  } : {
     isActive: false,
     daysLeft: 0,
     totalDays: 30,
@@ -18,14 +31,72 @@ function App() {
     totalTrafficGb: 200,
   }
 
-  const handlePayment = () => {
+  // Обработка оплаты
+  const handlePayment = async () => {
     if (!selectedTariff) return
-    // TODO: Интеграция с оплатой
-    console.log('Оплата тарифа:', selectedTariff)
+    
+    setIsPaymentLoading(true)
+    
+    try {
+      const confirmationUrl = await createPayment(selectedTariff.id)
+      
+      if (confirmationUrl) {
+        // Открываем страницу оплаты
+        if (tg) {
+          // В Telegram открываем через openLink
+          tg.openLink(confirmationUrl)
+        } else {
+          // В браузере просто открываем
+          window.open(confirmationUrl, '_blank')
+        }
+      }
+    } catch (err) {
+      console.error('Payment error:', err)
+    } finally {
+      setIsPaymentLoading(false)
+    }
   }
+
+  // Обновляем статистику при возврате в приложение
+  useEffect(() => {
+    if (!tg) return
+
+    const handleResume = () => {
+      // Обновляем статистику когда пользователь возвращается в приложение
+      refreshStats()
+    }
+
+    // Telegram WebApp events
+    tg.onEvent?.('viewportChanged', handleResume)
+    
+    return () => {
+      tg.offEvent?.('viewportChanged', handleResume)
+    }
+  }, [tg, refreshStats])
 
   // Рендер контента в зависимости от активной вкладки
   const renderContent = () => {
+    // Показываем загрузку
+    if (isLoading && !stats) {
+      return (
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-chocolate/60">Загрузка...</div>
+        </div>
+      )
+    }
+
+    // Показываем ошибку
+    if (error && !stats) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+          <div className="text-red-500">{error}</div>
+          <Button onClick={() => window.location.reload()}>
+            Попробовать снова
+          </Button>
+        </div>
+      )
+    }
+
     switch (activeTab) {
       case 'shop':
         return (
@@ -40,7 +111,7 @@ function App() {
               </h2>
               
               <div className="flex flex-col gap-3">
-                {tariffs.map((tariff) => (
+                {displayTariffs.map((tariff) => (
                   <TariffCard
                     key={tariff.id}
                     tariff={tariff}
@@ -54,11 +125,13 @@ function App() {
               <div className="mt-5">
                 <Button 
                   onClick={handlePayment}
-                  disabled={!selectedTariff}
+                  disabled={!selectedTariff || isPaymentLoading}
                 >
-                  {selectedTariff 
-                    ? `Оплатить ${selectedTariff.price}₽` 
-                    : 'Выберите тариф'
+                  {isPaymentLoading
+                    ? 'Создание платежа...'
+                    : selectedTariff 
+                      ? `Оплатить ${selectedTariff.price}₽` 
+                      : 'Выберите тариф'
                   }
                 </Button>
               </div>
@@ -67,7 +140,13 @@ function App() {
         )
       
       case 'vpn':
-        return <ConnectionScreen userOS={userOS} />
+        return (
+          <ConnectionScreen 
+            userOS={userOS} 
+            subscriptionUrl={stats?.subscriptionUrl || null}
+            isActive={stats?.isActive || false}
+          />
+        )
       
       case 'friends':
         return <ReferralScreen />
