@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react'
  * Минималистичная страница для открытия подписки в Happ
  * URL: /sub?url=<subscription_url>
  * 
- * Автоматически пытается открыть Happ, показывает fallback если не получилось
+ * Шифрует URL через API Happ и открывает deep link happ://crypt3/...
  */
 
 export function SubPage() {
   const [subscriptionUrl, setSubscriptionUrl] = useState<string>('')
-  const [status, setStatus] = useState<'loading' | 'trying' | 'manual'>('loading')
+  const [status, setStatus] = useState<'loading' | 'encrypting' | 'trying' | 'manual'>('loading')
+  const [error, setError] = useState<string>('')
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -17,18 +18,52 @@ export function SubPage() {
     
     if (url) {
       setSubscriptionUrl(url)
-      // Автоматически пытаемся открыть
-      tryOpenInHapp(url)
+      // Шифруем URL и открываем в Happ
+      encryptAndOpen(url)
     }
   }, [])
 
-  const tryOpenInHapp = (url: string) => {
-    setStatus('trying')
-    console.log('[SubPage] Opening subscription URL:', url)
+  // Шифрует URL через API Happ и возвращает happ://crypt3/... ссылку
+  const encryptUrl = async (url: string): Promise<string | null> => {
+    try {
+      const response = await fetch('https://crypto.happ.su/api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Encryption API error')
+      }
+      
+      const encryptedUrl = await response.text()
+      console.log('[SubPage] Encrypted URL:', encryptedUrl)
+      return encryptedUrl.trim()
+    } catch (err) {
+      console.error('[SubPage] Encryption failed:', err)
+      return null
+    }
+  }
+
+  const encryptAndOpen = async (url: string) => {
+    setStatus('encrypting')
     
-    // Просто редиректим на URL подписки
-    // Happ должен перехватить если зарегистрирован как обработчик
-    window.location.href = url
+    const happUrl = await encryptUrl(url)
+    
+    if (happUrl) {
+      tryOpenInHapp(happUrl)
+    } else {
+      setError('Не удалось подготовить ссылку')
+      setStatus('manual')
+    }
+  }
+
+  const tryOpenInHapp = (happUrl: string) => {
+    setStatus('trying')
+    console.log('[SubPage] Opening Happ URL:', happUrl)
+    
+    // Открываем зашифрованный deep link happ://crypt3/...
+    window.location.href = happUrl
     
     // Если через 2 сек мы ещё здесь - показываем ручной режим
     setTimeout(() => {
@@ -38,7 +73,7 @@ export function SubPage() {
 
   const handleRetry = () => {
     if (subscriptionUrl) {
-      tryOpenInHapp(subscriptionUrl)
+      encryptAndOpen(subscriptionUrl)
     }
   }
 
@@ -83,6 +118,15 @@ export function SubPage() {
           </>
         )}
         
+        {/* Encrypting */}
+        {status === 'encrypting' && (
+          <>
+            <div className="text-4xl mb-3 animate-pulse">🔐</div>
+            <h1 className="text-lg font-bold text-gray-800">Подготовка...</h1>
+            <p className="text-gray-500 text-sm mt-1">Секунду</p>
+          </>
+        )}
+        
         {/* Trying to open */}
         {status === 'trying' && (
           <>
@@ -95,9 +139,12 @@ export function SubPage() {
         {/* Manual mode - Happ didn't open */}
         {status === 'manual' && (
           <>
-            <h1 className="text-lg font-bold text-gray-800 mb-5">
-              Не открылось?
+            <h1 className="text-lg font-bold text-gray-800 mb-2">
+              {error || 'Не открылось?'}
             </h1>
+            <p className="text-gray-500 text-sm mb-5">
+              Убедитесь, что Happ установлен
+            </p>
             
             <div className="flex flex-col gap-3">
               <button
