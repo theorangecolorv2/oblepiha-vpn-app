@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     # ВАЖНО: Укажи правильный squad_id для Облепихи (не дефолтный!)
     # Получить ID можно в панели Remnawave в разделе Squads
     remnawave_squad_id: str = "406c6e73-489d-4d38-8868-4af594bb6a86"
+    
+    # External Squad для Облепихи (определяет название подписки и другие настройки)
+    # Создай External Squad в панели Remnawave и укажи его UUID здесь
+    # В External Squad настрой profileTitle = "Облепиха VPN"
+    remnawave_external_squad_id: str = ""
     remnawave_traffic_limit_bytes: int = 0
     remnawave_traffic_reset_strategy: Literal["NO_RESET", "DAY", "WEEK", "MONTH"] = "NO_RESET"
     remnawave_hwid_device_limit: int = 15

@@ -153,6 +153,10 @@ class RemnawaveService:
             "activeInternalSquads": [settings.remnawave_squad_id],
         }
         
+        # Добавляем External Squad если настроен (определяет profileTitle подписки)
+        if settings.remnawave_external_squad_id:
+            payload["activeExternalSquads"] = [settings.remnawave_external_squad_id]
+        
         logger.info(f"Creating Remnawave user: {username}, telegram_id: {telegram_id}")
         
         result = await self._request("POST", "/api/users", json_data=payload)

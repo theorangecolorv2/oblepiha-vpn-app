@@ -245,6 +245,14 @@ export function ConnectionScreen({ userOS, subscriptionUrl, isActive = false }: 
         <span className="material-symbols-outlined text-[20px]">support_agent</span>
         <span className="text-sm font-medium">{STRINGS.SUPPORT}</span>
       </button>
+
+      {/* Ссылка на FAQ и условия */}
+      <a 
+        href="/info"
+        className="text-[11px] text-chocolate/40 hover:text-chocolate/60 transition-colors text-center"
+      >
+        FAQ и условия использования
+      </a>
     </div>
   )
 }

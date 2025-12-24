@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { SubPage } from './pages/SubPage.tsx'
+import { InfoPage } from './pages/InfoPage.tsx'
 
 // Простой роутинг на основе pathname
 function Router() {
@@ -11,6 +12,11 @@ function Router() {
   // Страница импорта подписки
   if (path === '/sub' || path === '/sub/') {
     return <SubPage />
+  }
+  
+  // Страница информации (FAQ + условия использования)
+  if (path === '/info' || path === '/info/') {
+    return <InfoPage />
   }
   
   // Главное приложение
