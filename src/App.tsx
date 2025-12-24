@@ -28,7 +28,7 @@ function App() {
     daysLeft: 0,
     totalDays: 30,
     trafficLeftGb: 0,
-    totalTrafficGb: 200,
+    totalTrafficGb: 500,
   }
 
   // Состояние для ошибки платежа

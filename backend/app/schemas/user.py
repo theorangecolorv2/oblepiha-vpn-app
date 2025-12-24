@@ -73,6 +73,6 @@ class UserStatsResponse(BaseModel):
     days_left: int = 0
     total_days: int = 30
     traffic_left_gb: float = 0
-    total_traffic_gb: float = 200
+    total_traffic_gb: float = 500
     subscription_url: Optional[str] = None
 

@@ -185,7 +185,7 @@ async def get_user_stats(
             days_left=0,
             total_days=30,
             traffic_left_gb=0,
-            total_traffic_gb=200,
+            total_traffic_gb=500,
             subscription_url=None,
         )
     
@@ -220,7 +220,7 @@ async def get_user_stats(
         
         # Конвертируем в ГБ
         traffic_used_gb = traffic_used / (1024 ** 3)
-        traffic_limit_gb = traffic_limit / (1024 ** 3) if traffic_limit > 0 else 200
+        traffic_limit_gb = traffic_limit / (1024 ** 3) if traffic_limit > 0 else 500
         traffic_left_gb = max(0, traffic_limit_gb - traffic_used_gb)
         
         return UserStatsResponse(
@@ -228,7 +228,7 @@ async def get_user_stats(
             days_left=days_left,
             total_days=total_days,
             traffic_left_gb=round(traffic_left_gb, 1),
-            total_traffic_gb=round(traffic_limit_gb, 1) if traffic_limit > 0 else 200,
+            total_traffic_gb=round(traffic_limit_gb, 1) if traffic_limit > 0 else 500,
             subscription_url=user.subscription_url,
         )
         

@@ -23,9 +23,9 @@ export function Stats({ isActive, daysLeft, totalDays, trafficLeftGb, totalTraff
         
         {/* Days */}
         <div className="flex flex-col items-center gap-1.5 px-1">
-          <span className="text-chocolate/60 text-xs font-medium uppercase tracking-wider">Дней</span>
+          <span className="text-chocolate/60 text-xs font-medium uppercase tracking-wider">Осталось</span>
           <span className="text-chocolate text-[13px] font-bold whitespace-nowrap">
-            {isActive ? `${daysLeft}/${totalDays}` : '0'}
+            {isActive ? `${daysLeft} дн.` : '0 дн.'}
           </span>
         </div>
         

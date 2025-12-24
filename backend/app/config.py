@@ -42,8 +42,8 @@ class Settings(BaseSettings):
     # Создай External Squad в панели Remnawave и укажи его UUID здесь
     # В External Squad настрой profileTitle = "Облепиха VPN"
     remnawave_external_squad_id: str = ""
-    remnawave_traffic_limit_bytes: int = 0
-    remnawave_traffic_reset_strategy: Literal["NO_RESET", "DAY", "WEEK", "MONTH"] = "NO_RESET"
+    remnawave_traffic_limit_bytes: int = 536870912000  # 500 GB
+    remnawave_traffic_reset_strategy: Literal["NO_RESET", "DAY", "WEEK", "MONTH"] = "MONTH"
     remnawave_hwid_device_limit: int = 15
 
     # YooKassa
