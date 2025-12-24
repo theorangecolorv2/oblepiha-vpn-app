@@ -3,6 +3,9 @@ import type { UserOS } from '../hooks/useTelegram'
 import { config, DEV_SUBSCRIPTION_KEY } from '../config'
 import { STRINGS } from '../constants'
 
+// Получаем Telegram WebApp
+const tg = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
+
 interface ConnectionScreenProps {
   userOS: UserOS
   // URL подписки из API
@@ -27,19 +30,34 @@ const getAppConfig = (os: OSTab) => ({
 
 /**
  * Генерирует deep link для автоматического импорта подписки в Happ
+ * 
+ * Happ поддерживает:
+ * - Прямые протоколы: vmess://, vless://, trojan://, ss://, socks://
+ * - Custom scheme: happ://
+ * - HTTPS URL подписки (открываются напрямую)
  */
 function generateDeepLink(subscriptionKey: string): string {
-  // Если ключ уже содержит протокол (vmess://, vless://, etc.) - используем его напрямую
+  // Если ключ уже содержит протокол VPN - используем напрямую
   if (subscriptionKey.match(/^(vmess|vless|trojan|ss|socks):\/\//)) {
+    console.log('[DeepLink] Using direct VPN protocol')
     return subscriptionKey
   }
   
   // Если это зашифрованная ссылка happ://
   if (subscriptionKey.startsWith('happ://')) {
+    console.log('[DeepLink] Using happ:// scheme')
     return subscriptionKey
   }
   
-  // Если это обычный URL подписки - оборачиваем в happ:// схему
+  // Если это HTTPS URL подписки - просто возвращаем его
+  // Happ должен открыться при переходе по URL подписки
+  if (subscriptionKey.startsWith('http://') || subscriptionKey.startsWith('https://')) {
+    console.log('[DeepLink] Using HTTPS subscription URL directly')
+    return subscriptionKey
+  }
+  
+  // Fallback: оборачиваем в happ:// схему
+  console.log('[DeepLink] Wrapping in happ:// scheme')
   return `happ://add?url=${encodeURIComponent(subscriptionKey)}`
 }
 
@@ -61,13 +79,36 @@ export function ConnectionScreen({ userOS, subscriptionUrl, isActive = false }: 
       return
     }
 
-    const deepLink = generateDeepLink(currentKey)
+    console.log('[AutoConnect] Subscription URL:', currentKey)
     
-    if (selectedOS === 'ios' || selectedOS === 'android') {
-      window.location.href = deepLink
-    } else {
-      window.open(deepLink, '_blank')
+    // Для HTTPS URL используем tg.openLink - откроется во внешнем браузере
+    // где система предложит открыть в Happ (если установлен)
+    if (currentKey.startsWith('http://') || currentKey.startsWith('https://')) {
+      console.log('[AutoConnect] Opening HTTPS URL via Telegram')
+      if (tg?.openLink) {
+        tg.openLink(currentKey)
+      } else {
+        window.open(currentKey, '_blank')
+      }
+      return
     }
+    
+    // Для deep links (vmess://, vless://, happ://) пробуем прямое открытие
+    const deepLink = generateDeepLink(currentKey)
+    console.log('[AutoConnect] Deep link:', deepLink)
+    
+    // Создаём скрытую ссылку и кликаем (работает для deep links в WebView)
+    const link = document.createElement('a')
+    link.href = deepLink
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    // Fallback через location.href
+    setTimeout(() => {
+      window.location.href = deepLink
+    }, 100)
   }
 
   const handleCopyKey = async () => {
