@@ -2,6 +2,20 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { SubPage } from './pages/SubPage.tsx'
+
+// Простой роутинг на основе pathname
+function Router() {
+  const path = window.location.pathname
+  
+  // Страница импорта подписки
+  if (path === '/sub' || path === '/sub/') {
+    return <SubPage />
+  }
+  
+  // Главное приложение
+  return <App />
+}
 
 // Скрываем лоадер после загрузки шрифтов и рендера
 function hideLoader() {
@@ -21,7 +35,7 @@ function hideLoader() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <Router />
   </StrictMode>,
 )
 

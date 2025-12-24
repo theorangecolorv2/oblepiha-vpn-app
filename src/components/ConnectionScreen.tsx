@@ -28,39 +28,6 @@ const getAppConfig = (os: OSTab) => ({
   v2rayUrl: config.v2rayDownload[os],
 })
 
-/**
- * Генерирует deep link для автоматического импорта подписки в Happ
- * 
- * Happ поддерживает:
- * - Прямые протоколы: vmess://, vless://, trojan://, ss://, socks://
- * - Custom scheme: happ://
- * - HTTPS URL подписки (открываются напрямую)
- */
-function generateDeepLink(subscriptionKey: string): string {
-  // Если ключ уже содержит протокол VPN - используем напрямую
-  if (subscriptionKey.match(/^(vmess|vless|trojan|ss|socks):\/\//)) {
-    console.log('[DeepLink] Using direct VPN protocol')
-    return subscriptionKey
-  }
-  
-  // Если это зашифрованная ссылка happ://
-  if (subscriptionKey.startsWith('happ://')) {
-    console.log('[DeepLink] Using happ:// scheme')
-    return subscriptionKey
-  }
-  
-  // Если это HTTPS URL подписки - просто возвращаем его
-  // Happ должен открыться при переходе по URL подписки
-  if (subscriptionKey.startsWith('http://') || subscriptionKey.startsWith('https://')) {
-    console.log('[DeepLink] Using HTTPS subscription URL directly')
-    return subscriptionKey
-  }
-  
-  // Fallback: оборачиваем в happ:// схему
-  console.log('[DeepLink] Wrapping in happ:// scheme')
-  return `happ://add?url=${encodeURIComponent(subscriptionKey)}`
-}
-
 export function ConnectionScreen({ userOS, subscriptionUrl, isActive = false }: ConnectionScreenProps) {
   const [selectedOS, setSelectedOS] = useState<OSTab>(userOS)
   const [copySuccess, setCopySuccess] = useState(false)
@@ -81,34 +48,18 @@ export function ConnectionScreen({ userOS, subscriptionUrl, isActive = false }: 
 
     console.log('[AutoConnect] Subscription URL:', currentKey)
     
-    // Для HTTPS URL используем tg.openLink - откроется во внешнем браузере
-    // где система предложит открыть в Happ (если установлен)
-    if (currentKey.startsWith('http://') || currentKey.startsWith('https://')) {
-      console.log('[AutoConnect] Opening HTTPS URL via Telegram')
-      if (tg?.openLink) {
-        tg.openLink(currentKey)
-      } else {
-        window.open(currentKey, '_blank')
-      }
-      return
+    // Открываем нашу страницу /sub с параметром url
+    // Она покажет кнопки для открытия в Happ, QR код и копирование
+    const subPageUrl = `${window.location.origin}/sub?url=${encodeURIComponent(currentKey)}`
+    console.log('[AutoConnect] Opening sub page:', subPageUrl)
+    
+    // Используем tg.openLink для открытия во внешнем браузере
+    // (там deep links будут работать корректно)
+    if (tg?.openLink) {
+      tg.openLink(subPageUrl)
+    } else {
+      window.open(subPageUrl, '_blank')
     }
-    
-    // Для deep links (vmess://, vless://, happ://) пробуем прямое открытие
-    const deepLink = generateDeepLink(currentKey)
-    console.log('[AutoConnect] Deep link:', deepLink)
-    
-    // Создаём скрытую ссылку и кликаем (работает для deep links в WebView)
-    const link = document.createElement('a')
-    link.href = deepLink
-    link.style.display = 'none'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    
-    // Fallback через location.href
-    setTimeout(() => {
-      window.location.href = deepLink
-    }, 100)
   }
 
   const handleCopyKey = async () => {
