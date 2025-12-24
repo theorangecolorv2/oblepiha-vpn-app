@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 /**
- * Минималистичная страница для открытия подписки в Happ
+ * Страница редиректа для автоподключения в Happ
  * URL: /sub?url=<subscription_url>
  * 
- * Шифрует URL через API Happ и открывает deep link happ://crypt3/...
+ * Формат deep link: happ://add/{subscription_url}
+ * Работает как у конкурентов - просто и надёжно
  */
 
 export function SubPage() {
   const [subscriptionUrl, setSubscriptionUrl] = useState<string>('')
-  const [status, setStatus] = useState<'loading' | 'encrypting' | 'trying' | 'manual'>('loading')
-  const [error, setError] = useState<string>('')
+  const [timer, setTimer] = useState(3)
+  const [status, setStatus] = useState<'countdown' | 'manual'>('countdown')
+  const timerRef = useRef<number | null>(null)
+  const redirectedRef = useRef(false)
+
+  // Формируем deep link для Happ
+  const happDeepLink = subscriptionUrl ? `happ://add/${subscriptionUrl}` : ''
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -18,77 +24,69 @@ export function SubPage() {
     
     if (url) {
       setSubscriptionUrl(url)
-      // Шифруем URL и открываем в Happ
-      encryptAndOpen(url)
     }
   }, [])
 
-  // Шифрует URL через API Happ и возвращает happ://crypt3/... ссылку
-  const encryptUrl = async (url: string): Promise<string | null> => {
-    try {
-      const response = await fetch('https://crypto.happ.su/api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+  // Таймер обратного отсчёта и автоматический редирект
+  useEffect(() => {
+    if (!subscriptionUrl || redirectedRef.current) return
+
+    timerRef.current = window.setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          // Останавливаем таймер
+          if (timerRef.current) {
+            clearInterval(timerRef.current)
+          }
+          
+          // Выполняем редирект
+          if (!redirectedRef.current) {
+            redirectedRef.current = true
+            window.location.href = happDeepLink
+            
+            // Если через 2 сек ещё здесь — показываем ручной режим
+            setTimeout(() => {
+              setStatus('manual')
+            }, 2000)
+          }
+          
+          return 0
+        }
+        return prev - 1
       })
-      
-      if (!response.ok) {
-        throw new Error('Encryption API error')
+    }, 1000)
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
       }
-      
-      const encryptedUrl = await response.text()
-      console.log('[SubPage] Encrypted URL:', encryptedUrl)
-      return encryptedUrl.trim()
-    } catch (err) {
-      console.error('[SubPage] Encryption failed:', err)
-      return null
     }
-  }
+  }, [subscriptionUrl, happDeepLink])
 
-  const encryptAndOpen = async (url: string) => {
-    setStatus('encrypting')
+  // Ручной клик по кнопке
+  const handleOpenInHapp = () => {
+    if (!happDeepLink) return
+    window.location.href = happDeepLink
     
-    const happUrl = await encryptUrl(url)
-    
-    if (happUrl) {
-      tryOpenInHapp(happUrl)
-    } else {
-      setError('Не удалось подготовить ссылку')
-      setStatus('manual')
-    }
-  }
-
-  const tryOpenInHapp = (happUrl: string) => {
-    setStatus('trying')
-    console.log('[SubPage] Opening Happ URL:', happUrl)
-    
-    // Открываем зашифрованный deep link happ://crypt3/...
-    window.location.href = happUrl
-    
-    // Если через 2 сек мы ещё здесь - показываем ручной режим
+    // Показываем ручной режим через 2 сек
     setTimeout(() => {
       setStatus('manual')
     }, 2000)
   }
 
-  const handleRetry = () => {
-    if (subscriptionUrl) {
-      encryptAndOpen(subscriptionUrl)
-    }
-  }
-
+  // Копирование ссылки
   const handleCopy = async () => {
     if (!subscriptionUrl) return
     try {
       await navigator.clipboard.writeText(subscriptionUrl)
-      alert('✅ Ссылка скопирована!\n\nОткройте Happ → Добавить → Из буфера')
+      alert('✅ Ссылка скопирована!\n\nОткройте Happ → + → Вставить из буфера')
     } catch {
       prompt('Скопируйте ссылку:', subscriptionUrl)
     }
   }
 
   // Ошибка - нет URL
-  if (!subscriptionUrl && status !== 'loading') {
+  if (!subscriptionUrl) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center p-6">
         <div className="text-center">
@@ -102,72 +100,81 @@ export function SubPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center p-6">
-      <div className="text-center max-w-xs w-full">
+      <div className="text-center max-w-sm w-full">
         {/* Logo */}
         <img 
           src="/logo.webp" 
           alt="Облепиха VPN" 
-          className="w-20 h-20 mx-auto rounded-2xl shadow-lg mb-6"
+          className="w-24 h-24 mx-auto rounded-3xl shadow-xl mb-6"
         />
         
-        {/* Loading */}
-        {status === 'loading' && (
-          <>
-            <div className="text-4xl mb-3 animate-pulse">⏳</div>
-            <p className="text-gray-500">Загрузка...</p>
-          </>
-        )}
+        {/* App info */}
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8 text-orange-500">
+            <path d="M13.4,19.6l-7.9,7.9L5,30.4h6.6L13.4,19.6z" />
+            <path d="M13.2,13.5L14.6,5l-7.9,7.9L4.2,27.4l7.9-7.9l0.2-1.2h1l4.9-4.9H13.2z" />
+            <path d="M25.4,19.6L27.8,5l-7.9,7.9l-0.1,0.7h-0.6l-4.9,4.9h4.7l-1.5,9L25.4,19.6z" />
+            <path d="M18.7,27.5l-0.5,2.9h6.6l1.8-10.8L18.7,27.5z" />
+            <path d="M13.6,4.9l0.6-3.3H7.5L5.6,12.8L13.6,4.9z" />
+            <path d="M18.8,12.8l7.9-7.9l0.6-3.3h-6.6L18.8,12.8z" />
+          </svg>
+          <h2 className="text-2xl font-bold text-gray-800">Happ</h2>
+        </div>
         
-        {/* Encrypting */}
-        {status === 'encrypting' && (
-          <>
-            <div className="text-4xl mb-3 animate-pulse">🔐</div>
-            <h1 className="text-lg font-bold text-gray-800">Подготовка...</h1>
-            <p className="text-gray-500 text-sm mt-1">Секунду</p>
-          </>
-        )}
+        <p className="text-gray-600 mb-2">Перенаправление в Happ...</p>
         
-        {/* Trying to open */}
-        {status === 'trying' && (
-          <>
-            <div className="text-4xl mb-3 animate-bounce">🚀</div>
-            <h1 className="text-lg font-bold text-gray-800">Открываем Happ...</h1>
-            <p className="text-gray-500 text-sm mt-1">Подождите</p>
-          </>
-        )}
-        
-        {/* Manual mode - Happ didn't open */}
-        {status === 'manual' && (
-          <>
-            <h1 className="text-lg font-bold text-gray-800 mb-2">
-              {error || 'Не открылось?'}
-            </h1>
-            <p className="text-gray-500 text-sm mb-5">
-              Убедитесь, что Happ установлен
-            </p>
-            
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleRetry}
-                className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-semibold active:scale-[0.98] transition-transform shadow-lg"
-              >
-                🔄 Попробовать снова
-              </button>
-              
-              <button
-                onClick={handleCopy}
-                className="w-full py-3.5 bg-white text-gray-700 rounded-xl font-semibold border border-gray-200 active:scale-[0.98] transition-transform"
-              >
-                📋 Скопировать ссылку
-              </button>
+        {/* Countdown */}
+        {status === 'countdown' && timer > 0 && (
+          <div className="mb-6">
+            <p className="text-gray-500 text-sm mb-2">Автоматический переход через</p>
+            <div className="flex items-baseline justify-center gap-2">
+              <span className="text-4xl font-bold text-orange-500">{timer}</span>
+              <span className="text-gray-500">сек</span>
             </div>
-            
-            <p className="text-xs text-gray-400 mt-5 leading-relaxed">
-              Скопируйте и вставьте в Happ<br/>
-              через меню "Добавить"
-            </p>
-          </>
+          </div>
         )}
+        
+        {/* Info text */}
+        <p className="text-gray-500 text-sm mb-5">
+          {status === 'countdown' 
+            ? 'Если ничего не произошло, нажмите кнопку ниже'
+            : 'Убедитесь, что приложение Happ установлено'
+          }
+        </p>
+        
+        {/* Buttons */}
+        <div className="flex flex-col gap-3">
+          <a
+            href={happDeepLink}
+            onClick={(e) => {
+              e.preventDefault()
+              handleOpenInHapp()
+            }}
+            className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-semibold active:scale-[0.98] transition-transform shadow-lg flex items-center justify-center gap-2"
+          >
+            <svg viewBox="0 0 32 32" fill="currentColor" className="w-5 h-5">
+              <path d="M13.4,19.6l-7.9,7.9L5,30.4h6.6L13.4,19.6z" />
+              <path d="M13.2,13.5L14.6,5l-7.9,7.9L4.2,27.4l7.9-7.9l0.2-1.2h1l4.9-4.9H13.2z" />
+              <path d="M25.4,19.6L27.8,5l-7.9,7.9l-0.1,0.7h-0.6l-4.9,4.9h4.7l-1.5,9L25.4,19.6z" />
+              <path d="M18.7,27.5l-0.5,2.9h6.6l1.8-10.8L18.7,27.5z" />
+              <path d="M13.6,4.9l0.6-3.3H7.5L5.6,12.8L13.6,4.9z" />
+              <path d="M18.8,12.8l7.9-7.9l0.6-3.3h-6.6L18.8,12.8z" />
+            </svg>
+            Открыть в Happ
+          </a>
+          
+          <button
+            onClick={handleCopy}
+            className="w-full py-4 bg-white text-gray-700 rounded-2xl font-semibold border border-gray-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          >
+            📋 Скопировать ссылку
+          </button>
+        </div>
+        
+        <p className="text-xs text-gray-400 mt-6 leading-relaxed">
+          Если Happ не открывается — скопируйте ссылку<br/>
+          и вставьте через меню "+" в приложении
+        </p>
       </div>
     </div>
   )
