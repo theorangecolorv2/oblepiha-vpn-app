@@ -6,7 +6,7 @@ import { tariffs as fallbackTariffs } from './data/tariffs'
 import type { Tariff } from './types'
 
 function App() {
-  const { firstName, userOS, tg, isReady } = useTelegram()
+  const { firstName, userOS, tg } = useTelegram()
   const { isLoading, error, stats, tariffs, createPayment, refreshStats } = useUser()
   
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null)
@@ -42,11 +42,9 @@ function App() {
       
       if (confirmationUrl) {
         // Открываем страницу оплаты
-        if (tg) {
-          // В Telegram открываем через openLink
+        if (tg?.openLink) {
           tg.openLink(confirmationUrl)
         } else {
-          // В браузере просто открываем
           window.open(confirmationUrl, '_blank')
         }
       }
@@ -59,15 +57,13 @@ function App() {
 
   // Обновляем статистику при возврате в приложение
   useEffect(() => {
-    if (!tg) return
+    if (!tg?.onEvent) return
 
     const handleResume = () => {
-      // Обновляем статистику когда пользователь возвращается в приложение
       refreshStats()
     }
 
-    // Telegram WebApp events
-    tg.onEvent?.('viewportChanged', handleResume)
+    tg.onEvent('viewportChanged', handleResume)
     
     return () => {
       tg.offEvent?.('viewportChanged', handleResume)

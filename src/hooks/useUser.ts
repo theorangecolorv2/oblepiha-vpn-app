@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
-import { api, UserStats } from '../api'
+import { api } from '../api'
+import type { UserStats } from '../api'
 import type { Tariff } from '../types'
 
 interface UseUserReturn {
@@ -30,7 +31,7 @@ export function useUser(): UseUserReturn {
 
       try {
         // Загружаем параллельно: пользователя, статистику и тарифы
-        const [userResponse, statsResponse, tariffsResponse] = await Promise.all([
+        const [, statsResponse, tariffsResponse] = await Promise.all([
           api.getCurrentUser().catch(err => {
             console.error('Failed to get user:', err)
             return null
@@ -93,4 +94,3 @@ export function useUser(): UseUserReturn {
     createPayment,
   }
 }
-

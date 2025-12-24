@@ -45,8 +45,8 @@ export interface PaymentStatus {
 
 // Получить initData из Telegram WebApp
 function getInitData(): string {
-  if (typeof window !== 'undefined' && window.Telegram?.WebApp?.initData) {
-    return window.Telegram.WebApp.initData
+  if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+    return window.Telegram.WebApp.initData || ''
   }
   return ''
 }
@@ -58,9 +58,8 @@ async function apiFetch<T>(
 ): Promise<T> {
   const initData = getInitData()
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers || {}),
   }
   
   // Добавляем initData в заголовок для авторизации
@@ -70,7 +69,10 @@ async function apiFetch<T>(
   
   const response = await fetch(`${config.apiUrl}${endpoint}`, {
     ...options,
-    headers,
+    headers: {
+      ...headers,
+      ...(options.headers as Record<string, string> || {}),
+    },
   })
   
   if (!response.ok) {
@@ -124,4 +126,3 @@ export const api = {
     return apiFetch<PaymentStatus>(`/api/payments/${paymentId}/status`)
   },
 }
-
