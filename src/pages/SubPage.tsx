@@ -1,237 +1,127 @@
 import { useEffect, useState } from 'react'
 
 /**
- * Страница для импорта подписки в VPN клиент
+ * Минималистичная страница для открытия подписки в Happ
  * URL: /sub?url=<subscription_url>
  * 
- * Эта страница показывается когда пользователь нажимает "Авто-подключение"
- * и позволяет:
- * - Открыть подписку в Happ/v2rayNG
- * - Показать QR код для сканирования
- * - Скопировать ключ
+ * Автоматически пытается открыть Happ, показывает fallback если не получилось
  */
-
-type OS = 'ios' | 'android' | 'windows' | 'unknown'
-
-function detectOS(): OS {
-  if (typeof navigator === 'undefined') return 'unknown'
-  const ua = navigator.userAgent.toLowerCase()
-  
-  if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('mac')) return 'ios'
-  if (ua.includes('android')) return 'android'
-  if (ua.includes('win')) return 'windows'
-  return 'unknown'
-}
-
-// Deep link схемы для разных клиентов
-const getDeepLinks = (subscriptionUrl: string) => ({
-  // Happ использует sub:// или просто открытие URL
-  happ: `happ://add?url=${encodeURIComponent(subscriptionUrl)}`,
-  // v2rayNG на Android
-  v2rayng: `v2rayng://install-sub?url=${encodeURIComponent(subscriptionUrl)}`,
-  // Альтернативный формат
-  clash: `clash://install-config?url=${encodeURIComponent(subscriptionUrl)}`,
-})
 
 export function SubPage() {
   const [subscriptionUrl, setSubscriptionUrl] = useState<string>('')
-  const [copySuccess, setCopySuccess] = useState(false)
-  const [os] = useState<OS>(detectOS)
-  const [showQR, setShowQR] = useState(false)
+  const [status, setStatus] = useState<'loading' | 'trying' | 'manual'>('loading')
 
   useEffect(() => {
-    // Получаем URL подписки из query параметра
     const params = new URLSearchParams(window.location.search)
     const url = params.get('url')
+    
     if (url) {
       setSubscriptionUrl(url)
+      // Автоматически пытаемся открыть
+      tryOpenInHapp(url)
     }
   }, [])
+
+  const tryOpenInHapp = (url: string) => {
+    setStatus('trying')
+    console.log('[SubPage] Opening subscription URL:', url)
+    
+    // Просто редиректим на URL подписки
+    // Happ должен перехватить если зарегистрирован как обработчик
+    window.location.href = url
+    
+    // Если через 2 сек мы ещё здесь - показываем ручной режим
+    setTimeout(() => {
+      setStatus('manual')
+    }, 2000)
+  }
+
+  const handleRetry = () => {
+    if (subscriptionUrl) {
+      tryOpenInHapp(subscriptionUrl)
+    }
+  }
 
   const handleCopy = async () => {
     if (!subscriptionUrl) return
     try {
       await navigator.clipboard.writeText(subscriptionUrl)
-      setCopySuccess(true)
-      setTimeout(() => setCopySuccess(false), 2000)
-    } catch (err) {
-      console.error('Copy failed:', err)
+      alert('✅ Ссылка скопирована!\n\nОткройте Happ → Добавить → Из буфера')
+    } catch {
+      prompt('Скопируйте ссылку:', subscriptionUrl)
     }
   }
 
-  const handleOpenInApp = (scheme: 'happ' | 'v2rayng') => {
-    if (!subscriptionUrl) return
-    const links = getDeepLinks(subscriptionUrl)
-    
-    // Пробуем открыть deep link
-    const link = links[scheme]
-    console.log('[SubPage] Opening:', link)
-    
-    // Создаём скрытую ссылку и кликаем
-    const a = document.createElement('a')
-    a.href = link
-    a.style.display = 'none'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    
-    // Fallback
-    setTimeout(() => {
-      window.location.href = link
-    }, 100)
-  }
-
-  // Пробуем открыть прямой URL (может сработать если приложение зарегистрировано)
-  const handleOpenDirect = () => {
-    if (!subscriptionUrl) return
-    window.location.href = subscriptionUrl
-  }
-
-  if (!subscriptionUrl) {
+  // Ошибка - нет URL
+  if (!subscriptionUrl && status !== 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-6 shadow-lg text-center">
-          <span className="text-4xl mb-4 block">❌</span>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center p-6">
+        <div className="text-center">
+          <span className="text-5xl block mb-4">❌</span>
           <h1 className="text-xl font-bold text-gray-800">Ссылка не найдена</h1>
-          <p className="text-gray-500 mt-2">Вернитесь в приложение и попробуйте снова</p>
+          <p className="text-gray-500 mt-2 text-sm">Вернитесь в приложение</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-4">
-      <div className="max-w-md mx-auto">
-        {/* Header */}
-        <div className="text-center mb-6 pt-8">
-          <img 
-            src="/logo.webp" 
-            alt="Облепиха VPN" 
-            className="w-20 h-20 mx-auto rounded-2xl shadow-lg mb-4"
-          />
-          <h1 className="text-2xl font-bold text-gray-800">Облепиха VPN</h1>
-          <p className="text-gray-500 mt-1">Добавить подписку</p>
-        </div>
-
-        {/* Main Card */}
-        <div className="bg-white rounded-2xl p-5 shadow-lg mb-4">
-          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <span>📱</span> Открыть в приложении
-          </h2>
-          
-          <div className="flex flex-col gap-3">
-            {/* Happ Button */}
-            <button
-              onClick={() => handleOpenInApp('happ')}
-              className="w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-            >
-              <img src="/happ.webp" alt="Happ" className="w-6 h-6 rounded" />
-              Открыть в Happ
-            </button>
-
-            {/* v2rayNG for Android */}
-            {os === 'android' && (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center p-6">
+      <div className="text-center max-w-xs w-full">
+        {/* Logo */}
+        <img 
+          src="/logo.webp" 
+          alt="Облепиха VPN" 
+          className="w-20 h-20 mx-auto rounded-2xl shadow-lg mb-6"
+        />
+        
+        {/* Loading */}
+        {status === 'loading' && (
+          <>
+            <div className="text-4xl mb-3 animate-pulse">⏳</div>
+            <p className="text-gray-500">Загрузка...</p>
+          </>
+        )}
+        
+        {/* Trying to open */}
+        {status === 'trying' && (
+          <>
+            <div className="text-4xl mb-3 animate-bounce">🚀</div>
+            <h1 className="text-lg font-bold text-gray-800">Открываем Happ...</h1>
+            <p className="text-gray-500 text-sm mt-1">Подождите</p>
+          </>
+        )}
+        
+        {/* Manual mode - Happ didn't open */}
+        {status === 'manual' && (
+          <>
+            <h1 className="text-lg font-bold text-gray-800 mb-5">
+              Не открылось?
+            </h1>
+            
+            <div className="flex flex-col gap-3">
               <button
-                onClick={() => handleOpenInApp('v2rayng')}
-                className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                onClick={handleRetry}
+                className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-semibold active:scale-[0.98] transition-transform shadow-lg"
               >
-                <span>📡</span>
-                Открыть в v2rayNG
+                🔄 Попробовать снова
               </button>
-            )}
-
-            {/* Direct URL */}
-            <button
-              onClick={handleOpenDirect}
-              className="w-full py-2.5 px-4 border border-gray-200 text-gray-600 rounded-xl text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-            >
-              <span>🔗</span>
-              Открыть ссылку напрямую
-            </button>
-          </div>
-        </div>
-
-        {/* QR Code Card */}
-        <div className="bg-white rounded-2xl p-5 shadow-lg mb-4">
-          <button
-            onClick={() => setShowQR(!showQR)}
-            className="w-full flex items-center justify-between"
-          >
-            <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-              <span>📷</span> QR-код для сканирования
-            </h2>
-            <span className="text-gray-400">{showQR ? '▲' : '▼'}</span>
-          </button>
-          
-          {showQR && (
-            <div className="mt-4 flex flex-col items-center">
-              <div className="bg-white p-3 rounded-xl border border-gray-100">
-                {/* QR код через внешний API */}
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(subscriptionUrl)}`}
-                  alt="QR Code"
-                  width={200}
-                  height={200}
-                  className="rounded"
-                />
-              </div>
-              <p className="text-xs text-gray-400 mt-3 text-center">
-                Откройте Happ → Добавить → Сканировать QR
-              </p>
+              
+              <button
+                onClick={handleCopy}
+                className="w-full py-3.5 bg-white text-gray-700 rounded-xl font-semibold border border-gray-200 active:scale-[0.98] transition-transform"
+              >
+                📋 Скопировать ссылку
+              </button>
             </div>
-          )}
-        </div>
-
-        {/* Copy Key Card */}
-        <div className="bg-white rounded-2xl p-5 shadow-lg mb-4">
-          <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-            <span>📋</span> Скопировать ключ
-          </h2>
-          
-          <div className="bg-gray-50 rounded-xl p-3 mb-3">
-            <p className="text-xs text-gray-500 font-mono break-all">
-              {subscriptionUrl.length > 60 
-                ? subscriptionUrl.slice(0, 60) + '...' 
-                : subscriptionUrl
-              }
+            
+            <p className="text-xs text-gray-400 mt-5 leading-relaxed">
+              Скопируйте и вставьте в Happ<br/>
+              через меню "Добавить"
             </p>
-          </div>
-          
-          <button
-            onClick={handleCopy}
-            className={`w-full py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
-              copySuccess 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-gray-100 text-gray-700 active:scale-[0.98]'
-            }`}
-          >
-            <span>{copySuccess ? '✓' : '📋'}</span>
-            {copySuccess ? 'Скопировано!' : 'Скопировать ссылку'}
-          </button>
-        </div>
-
-        {/* Instructions */}
-        <div className="bg-amber-50 rounded-2xl p-4 mb-8">
-          <h3 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
-            <span>💡</span> Инструкция
-          </h3>
-          <ol className="text-sm text-amber-700 space-y-1 list-decimal list-inside">
-            <li>Скачайте приложение Happ</li>
-            <li>Нажмите кнопку "Открыть в Happ" выше</li>
-            <li>Или скопируйте ссылку и вставьте в приложении</li>
-            <li>Подключайтесь и пользуйтесь VPN!</li>
-          </ol>
-        </div>
-
-        {/* Back Button */}
-        <button
-          onClick={() => window.history.back()}
-          className="w-full py-3 text-gray-500 text-sm"
-        >
-          ← Вернуться назад
-        </button>
+          </>
+        )}
       </div>
     </div>
   )
 }
-
