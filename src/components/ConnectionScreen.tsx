@@ -185,18 +185,18 @@ export function ConnectionScreen({ userOS, subscriptionUrl, isActive = false }: 
               </h3>
               <button 
                 onClick={handleAutoConnect}
-                disabled={!currentKey || !isActive}
+                disabled={!currentKey}
                 className={`
                   w-full h-12 rounded-full flex items-center justify-center gap-2 
                   transition-all duration-200 font-bold text-sm tracking-wide
-                  ${currentKey && isActive
+                  ${currentKey
                     ? 'bg-primary hover:bg-[#d54d26] active:scale-[0.98] text-white shadow-lg shadow-primary/30' 
                     : 'bg-chocolate/10 text-chocolate/40 cursor-not-allowed'
                   }
                 `}
               >
                 <span>🚀</span>
-                {!isActive ? 'Требуется подписка' : STRINGS.AUTO_CONNECT}
+                {STRINGS.AUTO_CONNECT}
               </button>
             </div>
           </div>
@@ -212,11 +212,11 @@ export function ConnectionScreen({ userOS, subscriptionUrl, isActive = false }: 
           {/* Copy Key */}
           <button 
             onClick={handleCopyKey}
-            disabled={!currentKey || !isActive}
+            disabled={!currentKey}
             className={`
               flex-1 bg-white rounded-xl p-3 flex flex-col items-center gap-1.5 
               transition-transform shadow-soft
-              ${currentKey && isActive ? 'active:scale-[0.98]' : 'opacity-50 cursor-not-allowed'}
+              ${currentKey ? 'active:scale-[0.98]' : 'opacity-50 cursor-not-allowed'}
             `}
           >
             <div className={`

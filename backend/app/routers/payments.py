@@ -154,39 +154,41 @@ async def yookassa_webhook(
         remnawave = get_remnawave_service()
         
         # Если нет remnawave_uuid - пробуем найти в Remnawave
+        # ВАЖНО: Ищем ТОЛЬКО по username oblepiha_*, чтобы не найти пользователя из другого сервиса!
         if not user.remnawave_uuid:
-            logger.warning(f"No remnawave_uuid for user {user.telegram_id}, trying to find in Remnawave")
+            logger.warning(f"No remnawave_uuid for user {user.telegram_id}, trying to find Oblepiha user in Remnawave")
             
             remnawave_user = None
             
-            # Сначала пробуем по telegram_id
-            try:
-                remnawave_user = await remnawave.get_user_by_telegram_id(user.telegram_id)
-                if remnawave_user:
-                    logger.info(f"Found remnawave user by telegram_id: {remnawave_user.get('uuid')}")
-            except RemnawaveError as e:
-                logger.warning(f"Failed to find by telegram_id: {e}")
+            # Пробуем формат oblepiha_{telegram_id}_{username}
+            if user.telegram_username:
+                try:
+                    full_username = f"oblepiha_{user.telegram_id}_{user.telegram_username}"
+                    remnawave_user = await remnawave.get_user_by_username(full_username)
+                    if remnawave_user:
+                        logger.info(f"Found Oblepiha user by full username {full_username}: {remnawave_user.get('uuid')}")
+                except RemnawaveError as e:
+                    logger.warning(f"Failed to find by full username: {e}")
             
-            # Если не нашли - пробуем по username (старый формат tg_{telegram_id})
+            # Пробуем короткий формат oblepiha_{telegram_id}
             if not remnawave_user:
                 try:
-                    old_username = f"tg_{user.telegram_id}"
-                    remnawave_user = await remnawave.get_user_by_username(old_username)
+                    short_username = f"oblepiha_{user.telegram_id}"
+                    remnawave_user = await remnawave.get_user_by_username(short_username)
                     if remnawave_user:
-                        logger.info(f"Found remnawave user by old username {old_username}: {remnawave_user.get('uuid')}")
+                        logger.info(f"Found Oblepiha user by short username {short_username}: {remnawave_user.get('uuid')}")
                 except RemnawaveError as e:
-                    logger.warning(f"Failed to find by old username: {e}")
+                    logger.warning(f"Failed to find by short username: {e}")
             
-            # Пробуем новый формат oblepiha_{telegram_id}_*
+            # Пробуем формат с прочерком oblepiha_{telegram_id}_-
             if not remnawave_user:
                 try:
-                    # Пробуем без telegram username
-                    new_username = f"oblepiha_{user.telegram_id}"
-                    remnawave_user = await remnawave.get_user_by_username(new_username)
+                    dash_username = f"oblepiha_{user.telegram_id}_-"
+                    remnawave_user = await remnawave.get_user_by_username(dash_username)
                     if remnawave_user:
-                        logger.info(f"Found remnawave user by new username {new_username}: {remnawave_user.get('uuid')}")
+                        logger.info(f"Found Oblepiha user by dash username {dash_username}: {remnawave_user.get('uuid')}")
                 except RemnawaveError as e:
-                    logger.warning(f"Failed to find by new username: {e}")
+                    logger.warning(f"Failed to find by dash username: {e}")
             
             if remnawave_user:
                 user.remnawave_uuid = remnawave_user.get("uuid")
