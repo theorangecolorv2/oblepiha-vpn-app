@@ -91,6 +91,22 @@ class RemnawaveService:
                 return None
             raise
 
+    async def get_user_by_username(self, username: str) -> Optional[dict]:
+        """
+        Получить пользователя по username.
+        Возвращает None если пользователь не найден.
+        """
+        try:
+            result = await self._request(
+                "GET",
+                f"/api/users/by-username/{username}"
+            )
+            return result.get("response")
+        except RemnawaveError as e:
+            if e.status_code == 404:
+                return None
+            raise
+
     async def get_user_by_uuid(self, uuid: str) -> Optional[dict]:
         """Получить пользователя по UUID"""
         try:

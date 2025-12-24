@@ -153,18 +153,45 @@ async def yookassa_webhook(
         
         remnawave = get_remnawave_service()
         
-        # Если нет remnawave_uuid - пробуем найти по telegram_id
+        # Если нет remnawave_uuid - пробуем найти в Remnawave
         if not user.remnawave_uuid:
-            logger.warning(f"No remnawave_uuid for user {user.telegram_id}, trying to find by telegram_id")
+            logger.warning(f"No remnawave_uuid for user {user.telegram_id}, trying to find in Remnawave")
+            
+            remnawave_user = None
+            
+            # Сначала пробуем по telegram_id
             try:
                 remnawave_user = await remnawave.get_user_by_telegram_id(user.telegram_id)
                 if remnawave_user:
-                    user.remnawave_uuid = remnawave_user.get("uuid")
-                    logger.info(f"Found remnawave user: {user.remnawave_uuid}")
-                else:
-                    logger.error(f"Remnawave user not found for telegram_id={user.telegram_id}")
+                    logger.info(f"Found remnawave user by telegram_id: {remnawave_user.get('uuid')}")
             except RemnawaveError as e:
-                logger.error(f"Failed to find Remnawave user: {e}")
+                logger.warning(f"Failed to find by telegram_id: {e}")
+            
+            # Если не нашли - пробуем по username (старый формат tg_{telegram_id})
+            if not remnawave_user:
+                try:
+                    old_username = f"tg_{user.telegram_id}"
+                    remnawave_user = await remnawave.get_user_by_username(old_username)
+                    if remnawave_user:
+                        logger.info(f"Found remnawave user by old username {old_username}: {remnawave_user.get('uuid')}")
+                except RemnawaveError as e:
+                    logger.warning(f"Failed to find by old username: {e}")
+            
+            # Пробуем новый формат oblepiha_{telegram_id}_*
+            if not remnawave_user:
+                try:
+                    # Пробуем без telegram username
+                    new_username = f"oblepiha_{user.telegram_id}"
+                    remnawave_user = await remnawave.get_user_by_username(new_username)
+                    if remnawave_user:
+                        logger.info(f"Found remnawave user by new username {new_username}: {remnawave_user.get('uuid')}")
+                except RemnawaveError as e:
+                    logger.warning(f"Failed to find by new username: {e}")
+            
+            if remnawave_user:
+                user.remnawave_uuid = remnawave_user.get("uuid")
+            else:
+                logger.error(f"Remnawave user not found for telegram_id={user.telegram_id}")
         
         if user.remnawave_uuid:
             try:

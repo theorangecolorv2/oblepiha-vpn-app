@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     remnawave_api_token: str
 
     # Remnawave User Defaults
+    # ВАЖНО: Укажи правильный squad_id для Облепихи (не дефолтный!)
+    # Получить ID можно в панели Remnawave в разделе Squads
     remnawave_squad_id: str = "406c6e73-489d-4d38-8868-4af594bb6a86"
     remnawave_traffic_limit_bytes: int = 0
     remnawave_traffic_reset_strategy: Literal["NO_RESET", "DAY", "WEEK", "MONTH"] = "NO_RESET"

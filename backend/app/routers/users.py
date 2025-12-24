@@ -58,8 +58,14 @@ async def get_current_user_data(
         await db.flush()
         
         # Создаём пользователя в Remnawave
+        # Формат: oblepiha_{telegram_id}_{username} или oblepiha_{telegram_id} если нет username
         try:
-            username = f"tg_{telegram_user.id}"
+            tg_username = telegram_user.username or "-"
+            username = f"oblepiha_{telegram_user.id}_{tg_username}"
+            # Ограничиваем длину username (Remnawave может иметь лимит)
+            if len(username) > 50:
+                username = f"oblepiha_{telegram_user.id}"
+            
             remnawave_user = await remnawave.create_user(
                 username=username,
                 telegram_id=telegram_user.id,
@@ -73,15 +79,41 @@ async def get_current_user_data(
         except RemnawaveError as e:
             logger.error(f"Failed to create Remnawave user: {e}")
             # Пользователь может уже существовать в Remnawave
+            existing = None
+            
             # Пробуем найти по telegram_id
             try:
                 existing = await remnawave.get_user_by_telegram_id(telegram_user.id)
                 if existing:
-                    user.remnawave_uuid = existing.get("uuid")
-                    user.remnawave_username = existing.get("username")
-                    user.subscription_url = existing.get("subscriptionUrl")
+                    logger.info(f"Found existing Remnawave user by telegram_id: {existing.get('uuid')}")
             except Exception as inner_e:
-                logger.error(f"Failed to find existing Remnawave user: {inner_e}")
+                logger.warning(f"Failed to find by telegram_id: {inner_e}")
+            
+            # Если не нашли - пробуем по username (новый формат)
+            if not existing:
+                try:
+                    existing = await remnawave.get_user_by_username(username)
+                    if existing:
+                        logger.info(f"Found existing Remnawave user by username: {existing.get('uuid')}")
+                except Exception as inner_e:
+                    logger.warning(f"Failed to find by username: {inner_e}")
+            
+            # Пробуем старый формат username (tg_{telegram_id}) для совместимости
+            if not existing:
+                try:
+                    old_username = f"tg_{telegram_user.id}"
+                    existing = await remnawave.get_user_by_username(old_username)
+                    if existing:
+                        logger.info(f"Found existing Remnawave user by old username format: {existing.get('uuid')}")
+                except Exception as inner_e:
+                    logger.warning(f"Failed to find by old username: {inner_e}")
+            
+            if existing:
+                user.remnawave_uuid = existing.get("uuid")
+                user.remnawave_username = existing.get("username")
+                user.subscription_url = existing.get("subscriptionUrl")
+            else:
+                logger.error(f"Could not find Remnawave user for telegram_id={telegram_user.id}")
         
         await db.commit()
         await db.refresh(user)
