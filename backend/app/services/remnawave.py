@@ -172,6 +172,7 @@ class RemnawaveService:
         
         Если подписка истекла - отсчёт от текущей даты.
         Если активна - добавляем к текущей дате истечения.
+        Также назначает external squad если он настроен.
         """
         # Сначала получаем текущие данные пользователя
         user = await self.get_user_by_uuid(uuid)
@@ -204,7 +205,48 @@ class RemnawaveService:
             "status": "ACTIVE",
         }
         
+        # Добавляем External Squad если настроен (определяет profileTitle подписки)
+        if self.settings.remnawave_external_squad_id:
+            payload["activeExternalSquads"] = [self.settings.remnawave_external_squad_id]
+        
+        # Сохраняем internal squad если он был назначен
+        current_internal_squads = user.get("activeInternalSquads", [])
+        if current_internal_squads:
+            payload["activeInternalSquads"] = current_internal_squads
+        elif self.settings.remnawave_squad_id:
+            # Если сквадов не было, назначаем дефолтный
+            payload["activeInternalSquads"] = [self.settings.remnawave_squad_id]
+        
         logger.info(f"Extending subscription for {uuid}: +{days_to_add} days until {new_expire}")
+        
+        result = await self._request("PATCH", "/api/users", json_data=payload)
+        return result.get("response")
+
+    async def update_user_squads(self, uuid: str) -> dict:
+        """
+        Обновить сквады пользователя (internal и external).
+        Используется для назначения external squad существующим пользователям.
+        """
+        user = await self.get_user_by_uuid(uuid)
+        if not user:
+            raise RemnawaveError(f"User not found: {uuid}", status_code=404)
+        
+        payload = {
+            "uuid": uuid,
+        }
+        
+        # Сохраняем или назначаем internal squad
+        current_internal_squads = user.get("activeInternalSquads", [])
+        if current_internal_squads:
+            payload["activeInternalSquads"] = current_internal_squads
+        elif self.settings.remnawave_squad_id:
+            payload["activeInternalSquads"] = [self.settings.remnawave_squad_id]
+        
+        # Назначаем External Squad если настроен
+        if self.settings.remnawave_external_squad_id:
+            payload["activeExternalSquads"] = [self.settings.remnawave_external_squad_id]
+        
+        logger.info(f"Updating squads for user {uuid}")
         
         result = await self._request("PATCH", "/api/users", json_data=payload)
         return result.get("response")
