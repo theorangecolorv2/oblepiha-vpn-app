@@ -154,8 +154,9 @@ class RemnawaveService:
         }
         
         # Добавляем External Squad если настроен (определяет profileTitle подписки)
+        # В API используется externalSquadUuid (строка), а не activeExternalSquads (массив)
         if settings.remnawave_external_squad_id:
-            payload["activeExternalSquads"] = [settings.remnawave_external_squad_id]
+            payload["externalSquadUuid"] = settings.remnawave_external_squad_id
         
         logger.info(f"Creating Remnawave user: {username}, telegram_id: {telegram_id}")
         
@@ -205,17 +206,25 @@ class RemnawaveService:
             "status": "ACTIVE",
         }
         
-        # Добавляем External Squad если настроен (определяет profileTitle подписки)
-        if self.settings.remnawave_external_squad_id:
-            payload["activeExternalSquads"] = [self.settings.remnawave_external_squad_id]
-        
         # Сохраняем internal squad если он был назначен
+        # В ответе API activeInternalSquads - это массив объектов с полем uuid,
+        # но при отправке запроса нужен массив строк (UUID)
         current_internal_squads = user.get("activeInternalSquads", [])
-        if current_internal_squads:
-            payload["activeInternalSquads"] = current_internal_squads
+        if current_internal_squads and len(current_internal_squads) > 0:
+            # Извлекаем UUID из объектов, если они в формате объектов
+            if isinstance(current_internal_squads[0], dict):
+                payload["activeInternalSquads"] = [squad.get("uuid") for squad in current_internal_squads if squad.get("uuid")]
+            else:
+                # Уже строки
+                payload["activeInternalSquads"] = current_internal_squads
         elif self.settings.remnawave_squad_id:
             # Если сквадов не было, назначаем дефолтный
             payload["activeInternalSquads"] = [self.settings.remnawave_squad_id]
+        
+        # Добавляем External Squad если настроен (определяет profileTitle подписки)
+        # В API используется externalSquadUuid (строка), а не activeExternalSquads (массив)
+        if self.settings.remnawave_external_squad_id:
+            payload["externalSquadUuid"] = self.settings.remnawave_external_squad_id
         
         logger.info(f"Extending subscription for {uuid}: +{days_to_add} days until {new_expire}")
         
@@ -236,15 +245,23 @@ class RemnawaveService:
         }
         
         # Сохраняем или назначаем internal squad
+        # В ответе API activeInternalSquads - это массив объектов с полем uuid,
+        # но при отправке запроса нужен массив строк (UUID)
         current_internal_squads = user.get("activeInternalSquads", [])
-        if current_internal_squads:
-            payload["activeInternalSquads"] = current_internal_squads
+        if current_internal_squads and len(current_internal_squads) > 0:
+            # Извлекаем UUID из объектов, если они в формате объектов
+            if isinstance(current_internal_squads[0], dict):
+                payload["activeInternalSquads"] = [squad.get("uuid") for squad in current_internal_squads if squad.get("uuid")]
+            else:
+                # Уже строки
+                payload["activeInternalSquads"] = current_internal_squads
         elif self.settings.remnawave_squad_id:
             payload["activeInternalSquads"] = [self.settings.remnawave_squad_id]
         
         # Назначаем External Squad если настроен
+        # В API используется externalSquadUuid (строка), а не activeExternalSquads (массив)
         if self.settings.remnawave_external_squad_id:
-            payload["activeExternalSquads"] = [self.settings.remnawave_external_squad_id]
+            payload["externalSquadUuid"] = self.settings.remnawave_external_squad_id
         
         logger.info(f"Updating squads for user {uuid}")
         
