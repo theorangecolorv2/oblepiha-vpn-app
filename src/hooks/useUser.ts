@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { api } from '../api'
-import type { UserStats } from '../api'
+import type { UserStats, UserResponse } from '../api'
 import type { Tariff } from '../types'
 
 interface UseUserReturn {
@@ -11,10 +11,13 @@ interface UseUserReturn {
   // Данные пользователя
   stats: UserStats | null
   tariffs: Tariff[]
+  user: UserResponse | null
   
   // Методы
   refreshStats: () => Promise<void>
   createPayment: (tariffId: string) => Promise<string | null>
+  acceptTerms: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 export function useUser(): UseUserReturn {
@@ -22,6 +25,7 @@ export function useUser(): UseUserReturn {
   const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState<UserStats | null>(null)
   const [tariffs, setTariffs] = useState<Tariff[]>([])
+  const [user, setUser] = useState<UserResponse | null>(null)
 
   // Загрузка данных при монтировании
   useEffect(() => {
@@ -31,7 +35,7 @@ export function useUser(): UseUserReturn {
 
       try {
         // Загружаем параллельно: пользователя, статистику и тарифы
-        const [, statsResponse, tariffsResponse] = await Promise.all([
+        const [userResponse, statsResponse, tariffsResponse] = await Promise.all([
           api.getCurrentUser().catch(err => {
             console.error('Failed to get user:', err)
             return null
@@ -45,6 +49,10 @@ export function useUser(): UseUserReturn {
             return []
           }),
         ])
+
+        if (userResponse) {
+          setUser(userResponse)
+        }
 
         if (statsResponse) {
           setStats(statsResponse)
@@ -88,12 +96,38 @@ export function useUser(): UseUserReturn {
     }
   }, [])
 
+  // Принять условия пользования
+  const acceptTerms = useCallback(async () => {
+    try {
+      await api.acceptTerms()
+      // Обновляем данные пользователя после принятия условий
+      const updatedUser = await api.getCurrentUser()
+      setUser(updatedUser)
+    } catch (err) {
+      console.error('[useUser] Failed to accept terms:', err)
+      throw err
+    }
+  }, [])
+
+  // Обновить данные пользователя
+  const refreshUser = useCallback(async () => {
+    try {
+      const updatedUser = await api.getCurrentUser()
+      setUser(updatedUser)
+    } catch (err) {
+      console.error('[useUser] Failed to refresh user:', err)
+    }
+  }, [])
+
   return {
     isLoading,
     error,
     stats,
     tariffs,
+    user,
     refreshStats,
     createPayment,
+    acceptTerms,
+    refreshUser,
   }
 }

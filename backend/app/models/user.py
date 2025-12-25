@@ -43,6 +43,9 @@ class User(Base):
     referrer_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True, index=True)
     referral_code: Mapped[Optional[str]] = mapped_column(String(16), unique=True, nullable=True)
     
+    # Согласие с условиями пользования
+    terms_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    
     # Метаданные
     created_at: Mapped[datetime] = mapped_column(
         DateTime, 

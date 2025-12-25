@@ -63,6 +63,9 @@ class UserResponse(BaseModel):
     
     # Реферальная система
     referral_code: Optional[str] = None
+    
+    # Согласие с условиями пользования
+    terms_accepted_at: Optional[datetime] = None
 
 
 class UserStatsResponse(BaseModel):

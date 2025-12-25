@@ -7,9 +7,13 @@ export const config = {
   
   // Режим разработки - показывать тестовые данные если нет Telegram
   devMode: import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV,
+  
 
   // Ссылка на поддержку в Telegram
   supportTg: import.meta.env.VITE_SUPPORT_TG || 'https://t.me/oblepiha_support',
+
+  // Ссылка на условия пользования (страница /info в мини-аппе)
+  termsUrl: import.meta.env.VITE_TERMS_URL || '/info',
 
   // Ссылки на скачивание приложения Happ
   happDownload: {

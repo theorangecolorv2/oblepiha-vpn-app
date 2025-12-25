@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Header, Stats, TariffCard, Button, BottomNav, ConnectionScreen, ReferralScreen } from './components'
+import { Header, Stats, TariffCard, Button, BottomNav, ConnectionScreen, ReferralScreen, TermsAgreementModal } from './components'
 import { useTelegram } from './hooks/useTelegram'
 import { useUser } from './hooks/useUser'
 import { tariffs as fallbackTariffs } from './data/tariffs'
@@ -7,12 +7,14 @@ import type { Tariff } from './types'
 
 function App() {
   const { firstName, userOS, tg } = useTelegram()
-  const { isLoading, error, stats, tariffs, createPayment, refreshStats } = useUser()
+  const { isLoading, error, stats, tariffs, user, createPayment, refreshStats, acceptTerms } = useUser()
   
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null)
   const [activeTab, setActiveTab] = useState<'shop' | 'vpn' | 'friends'>('shop')
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [autoRenewEnabled, setAutoRenewEnabled] = useState(true) // По умолчанию включено
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [pendingPayment, setPendingPayment] = useState<(() => void) | null>(null)
 
   // Используем тарифы с API или fallback
   const displayTariffs = tariffs.length > 0 ? tariffs : fallbackTariffs
@@ -33,7 +35,7 @@ function App() {
   // Состояние для ошибки платежа
   const [paymentError, setPaymentError] = useState<string | null>(null)
 
-  // Обработка оплаты
+  // Проверка согласия с условиями перед оплатой
   const handlePayment = async () => {
     console.log('[Payment] Button clicked, selectedTariff:', selectedTariff)
     
@@ -41,13 +43,29 @@ function App() {
       console.warn('[Payment] No tariff selected')
       return
     }
-    
+
+    // Проверяем, принял ли пользователь условия
+    const hasAcceptedTerms = user?.termsAcceptedAt !== null && user?.termsAcceptedAt !== undefined
+
+    if (!hasAcceptedTerms) {
+      // Показываем модалку с условиями
+      setPendingPayment(() => () => proceedWithPayment(selectedTariff.id))
+      setShowTermsModal(true)
+      return
+    }
+
+    // Если условия уже приняты, сразу переходим к оплате
+    await proceedWithPayment(selectedTariff.id)
+  }
+
+  // Выполнение оплаты
+  const proceedWithPayment = async (tariffId: string) => {
     setIsPaymentLoading(true)
     setPaymentError(null)
     
     try {
-      console.log('[Payment] Creating payment for tariff:', selectedTariff.id)
-      const confirmationUrl = await createPayment(selectedTariff.id)
+      console.log('[Payment] Creating payment for tariff:', tariffId)
+      const confirmationUrl = await createPayment(tariffId)
       console.log('[Payment] Got confirmation URL:', confirmationUrl)
       
       if (confirmationUrl) {
@@ -68,6 +86,23 @@ function App() {
       setPaymentError(err instanceof Error ? err.message : 'Ошибка при создании платежа')
     } finally {
       setIsPaymentLoading(false)
+    }
+  }
+
+  // Обработка согласия с условиями
+  const handleTermsAgree = async () => {
+    try {
+      await acceptTerms()
+      setShowTermsModal(false)
+      
+      // Если была отложенная оплата - выполняем её
+      if (pendingPayment) {
+        pendingPayment()
+        setPendingPayment(null)
+      }
+    } catch (err) {
+      console.error('[Terms] Failed to accept terms:', err)
+      setPaymentError('Не удалось принять условия. Попробуйте ещё раз.')
     }
   }
 
@@ -191,6 +226,12 @@ function App() {
       
       {/* Нижняя навигация */}
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Модальное окно согласия с условиями */}
+      <TermsAgreementModal 
+        isOpen={showTermsModal}
+        onAgree={handleTermsAgree}
+      />
     </div>
   )
 }

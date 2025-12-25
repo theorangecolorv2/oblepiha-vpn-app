@@ -27,6 +27,7 @@ export interface UserResponse {
   trafficUsedBytes: number
   trafficLimitBytes: number
   referralCode: string | null
+  termsAcceptedAt: string | null
 }
 
 export interface PaymentResponse {
@@ -140,5 +141,14 @@ export const api = {
    */
   async getPaymentStatus(paymentId: string): Promise<PaymentStatus> {
     return apiFetch<PaymentStatus>(`/api/payments/${paymentId}/status`)
+  },
+
+  /**
+   * Принять условия пользования
+   */
+  async acceptTerms(): Promise<void> {
+    return apiFetch<void>('/api/users/me/accept-terms', {
+      method: 'POST',
+    })
   },
 }

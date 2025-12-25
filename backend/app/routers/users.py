@@ -162,6 +162,7 @@ async def get_current_user_data(
         traffic_used_bytes=traffic_used,
         traffic_limit_bytes=traffic_limit,
         referral_code=user.referral_code,
+        terms_accepted_at=user.terms_accepted_at,
     )
 
 
@@ -235,4 +236,32 @@ async def get_user_stats(
     except RemnawaveError as e:
         logger.error(f"Failed to get stats from Remnawave: {e}")
         return UserStatsResponse()
+
+
+@router.post("/me/accept-terms")
+async def accept_terms(
+    telegram_user: TelegramUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Принять условия пользования.
+    Сохраняет текущее время как время принятия условий.
+    """
+    # Ищем пользователя
+    result = await db.execute(
+        select(User).where(User.telegram_id == telegram_user.id)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Сохраняем время принятия условий
+    user.terms_accepted_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(user)
+    
+    logger.info(f"User {telegram_user.id} accepted terms at {user.terms_accepted_at}")
+    
+    return {"status": "ok", "terms_accepted_at": user.terms_accepted_at}
 
