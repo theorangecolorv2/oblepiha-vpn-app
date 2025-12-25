@@ -12,6 +12,7 @@ function App() {
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null)
   const [activeTab, setActiveTab] = useState<'shop' | 'vpn' | 'friends'>('shop')
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
+  const [autoRenewEnabled, setAutoRenewEnabled] = useState(true) // По умолчанию включено
 
   // Используем тарифы с API или fallback
   const displayTariffs = tariffs.length > 0 ? tariffs : fallbackTariffs
@@ -113,7 +114,11 @@ function App() {
         return (
           <>
             <Header firstName={firstName} />
-            <Stats {...userStats} />
+            <Stats 
+              {...userStats} 
+              autoRenewEnabled={autoRenewEnabled}
+              onAutoRenewToggle={setAutoRenewEnabled}
+            />
             
             {/* Выбор тарифа */}
             <section className="flex flex-col flex-1">
