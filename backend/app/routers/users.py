@@ -163,6 +163,7 @@ async def get_current_user_data(
         traffic_limit_bytes=traffic_limit,
         referral_code=user.referral_code,
         terms_accepted_at=user.terms_accepted_at,
+        trial_used=user.trial_used,
         auto_renew_enabled=user.auto_renew_enabled,
         has_payment_method=bool(user.payment_method_id),
         card_last4=user.card_last4,

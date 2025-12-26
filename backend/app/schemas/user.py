@@ -67,6 +67,9 @@ class UserResponse(BaseModel):
     # Согласие с условиями пользования
     terms_accepted_at: Optional[datetime] = None
 
+    # Пробный период
+    trial_used: bool = False
+
     # Автопродление
     auto_renew_enabled: bool = False
     has_payment_method: bool = False

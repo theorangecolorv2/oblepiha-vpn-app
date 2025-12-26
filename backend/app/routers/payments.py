@@ -43,15 +43,22 @@ async def create_payment(
     tariff = get_tariff_by_id(payment_data.tariff_id)
     if not tariff:
         raise HTTPException(status_code=400, detail="Invalid tariff_id")
-    
+
     # Получаем пользователя из БД
     result = await db.execute(
         select(User).where(User.telegram_id == telegram_user.id)
     )
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found. Call /api/users/me first")
+
+    # Проверяем, не пытается ли пользователь купить пробный тариф повторно
+    if payment_data.tariff_id == "trial" and user.trial_used:
+        raise HTTPException(
+            status_code=400,
+            detail="Trial period can only be used once"
+        )
     
     # Создаём платёж в YooKassa
     yookassa_payment = yookassa.create_payment(
@@ -214,6 +221,11 @@ async def yookassa_webhook(
                 
                 # Обновляем статус в локальной БД
                 user.is_active = True
+
+                # Отмечаем использование пробного периода если это был trial
+                if payment.tariff_id == "trial":
+                    user.trial_used = True
+                    logger.info(f"Trial period marked as used for user {user.telegram_id}")
 
                 # Сохраняем данные карты в user если карта была сохранена
                 if payment_method.get("saved") and payment_method_id:

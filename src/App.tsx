@@ -162,14 +162,19 @@ function App() {
               </h2>
               
               <div className="flex flex-col gap-3">
-                {displayTariffs.map((tariff) => (
-                  <TariffCard
-                    key={tariff.id}
-                    tariff={tariff}
-                    isSelected={selectedTariff?.id === tariff.id}
-                    onSelect={setSelectedTariff}
-                  />
-                ))}
+                {displayTariffs.map((tariff) => {
+                  const isTrialUsed = tariff.id === 'trial' && user?.trialUsed
+                  return (
+                    <TariffCard
+                      key={tariff.id}
+                      tariff={tariff}
+                      isSelected={selectedTariff?.id === tariff.id}
+                      onSelect={setSelectedTariff}
+                      isDisabled={isTrialUsed}
+                      disabledReason={isTrialUsed ? 'Уже использован' : undefined}
+                    />
+                  )
+                })}
               </div>
               
               {/* Ошибка платежа */}

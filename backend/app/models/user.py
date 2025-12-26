@@ -46,6 +46,9 @@ class User(Base):
     # Согласие с условиями пользования
     terms_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    # Пробный период
+    trial_used: Mapped[bool] = mapped_column(Boolean, default=False)
+
     # Автопродление подписки
     auto_renew_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     payment_method_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)

@@ -28,6 +28,7 @@ export interface UserResponse {
   trafficLimitBytes: number
   referralCode: string | null
   termsAcceptedAt: string | null
+  trialUsed: boolean
 }
 
 export interface PaymentResponse {
