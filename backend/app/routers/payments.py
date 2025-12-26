@@ -58,6 +58,7 @@ async def create_payment(
         tariff_id=payment_data.tariff_id,
         telegram_id=telegram_user.id,
         user_id=user.id,
+        save_payment_method=payment_data.setup_auto_renew,
     )
     
     if not yookassa_payment:
@@ -136,8 +137,16 @@ async def yookassa_webhook(
     # Если платёж успешен - продлеваем подписку
     if new_status == "succeeded" and payment_object.get("paid"):
         logger.info(f"Payment succeeded: {payment_id}, extending subscription")
-        
+
         payment.paid_at = datetime.utcnow()
+
+        # Сохраняем payment_method_id если карта была сохранена
+        payment_method = payment_object.get("payment_method", {})
+        if payment_method.get("saved"):
+            payment_method_id = payment_method.get("id")
+            if payment_method_id:
+                payment.payment_method_id = payment_method_id
+                logger.info(f"Saved payment_method_id: {payment_method_id}")
         
         # Получаем пользователя
         user_result = await db.execute(
@@ -205,7 +214,21 @@ async def yookassa_webhook(
                 
                 # Обновляем статус в локальной БД
                 user.is_active = True
-                
+
+                # Сохраняем данные карты в user если карта была сохранена
+                if payment_method.get("saved") and payment_method_id:
+                    user.payment_method_id = payment_method_id
+                    # Сохраняем данные карты для отображения в UI
+                    card_info = payment_method.get("card", {})
+                    if card_info:
+                        user.card_last4 = card_info.get("last4")
+                        user.card_brand = card_info.get("card_type")
+                    # Включаем автопродление если это был платёж для настройки
+                    metadata = payment_object.get("metadata", {})
+                    if metadata.get("setup_auto_renew") == "true":
+                        user.auto_renew_enabled = True
+                        logger.info(f"Auto-renew enabled for user {user.telegram_id}")
+
                 logger.info(
                     f"Subscription extended: user={user.telegram_id}, days={payment.days}"
                 )

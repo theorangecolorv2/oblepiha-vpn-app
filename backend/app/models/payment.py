@@ -6,7 +6,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -35,9 +35,14 @@ class Payment(Base):
     
     # YooKassa данные
     yookassa_payment_id: Mapped[Optional[str]] = mapped_column(String(64), unique=True, nullable=True, index=True)
-    
+    payment_method_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
     # Статус: pending, waiting_for_capture, succeeded, canceled
     status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False)
+
+    # Автоплатёж
+    is_auto_payment: Mapped[bool] = mapped_column(Boolean, default=False)
+    auto_payment_attempt: Mapped[int] = mapped_column(Integer, default=0)
     
     # Дополнительные данные (JSON строка)
     metadata_json: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)

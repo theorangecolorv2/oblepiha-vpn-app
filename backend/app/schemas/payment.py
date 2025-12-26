@@ -12,6 +12,7 @@ from pydantic.alias_generators import to_camel
 class PaymentCreate(BaseModel):
     """Создание платежа"""
     tariff_id: str
+    setup_auto_renew: bool = False  # Настроить автопродление (сохранить карту)
 
 
 class PaymentResponse(BaseModel):

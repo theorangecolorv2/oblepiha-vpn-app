@@ -163,6 +163,10 @@ async def get_current_user_data(
         traffic_limit_bytes=traffic_limit,
         referral_code=user.referral_code,
         terms_accepted_at=user.terms_accepted_at,
+        auto_renew_enabled=user.auto_renew_enabled,
+        has_payment_method=bool(user.payment_method_id),
+        card_last4=user.card_last4,
+        card_brand=user.card_brand,
     )
 
 
@@ -262,6 +266,129 @@ async def accept_terms(
     await db.refresh(user)
     
     logger.info(f"User {telegram_user.id} accepted terms at {user.terms_accepted_at}")
-    
+
     return {"status": "ok", "terms_accepted_at": user.terms_accepted_at}
+
+
+@router.get("/me/auto-renew/status")
+async def get_auto_renew_status(
+    telegram_user: TelegramUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Получить статус автопродления.
+
+    Возвращает:
+    - enabled: включено ли автопродление
+    - has_payment_method: есть ли сохранённый способ оплаты
+    - card_last4: последние 4 цифры карты
+    - card_brand: бренд карты (Visa, Mastercard, Mir)
+    """
+    result = await db.execute(
+        select(User).where(User.telegram_id == telegram_user.id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "enabled": user.auto_renew_enabled,
+        "has_payment_method": bool(user.payment_method_id),
+        "card_last4": user.card_last4,
+        "card_brand": user.card_brand,
+    }
+
+
+@router.post("/me/auto-renew/disable")
+async def disable_auto_renew(
+    telegram_user: TelegramUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Отключить автопродление.
+
+    Сохранённый способ оплаты остаётся для возможного повторного включения.
+    """
+    result = await db.execute(
+        select(User).where(User.telegram_id == telegram_user.id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.auto_renew_enabled = False
+    await db.commit()
+
+    logger.info(f"Auto-renew disabled for user {telegram_user.id}")
+
+    return {"status": "ok", "auto_renew_enabled": False}
+
+
+@router.post("/me/auto-renew/enable")
+async def enable_auto_renew(
+    telegram_user: TelegramUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Включить автопродление.
+
+    Требует наличия сохранённого способа оплаты.
+    Если способа оплаты нет - возвращает ошибку с инструкцией.
+    """
+    result = await db.execute(
+        select(User).where(User.telegram_id == telegram_user.id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not user.payment_method_id:
+        raise HTTPException(
+            status_code=400,
+            detail="No saved payment method. Please make a payment with setup_auto_renew=true first."
+        )
+
+    user.auto_renew_enabled = True
+    await db.commit()
+
+    logger.info(f"Auto-renew enabled for user {telegram_user.id}")
+
+    return {
+        "status": "ok",
+        "auto_renew_enabled": True,
+        "card_last4": user.card_last4,
+        "card_brand": user.card_brand,
+    }
+
+
+@router.delete("/me/auto-renew/payment-method")
+async def delete_payment_method(
+    telegram_user: TelegramUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Удалить сохранённый способ оплаты.
+
+    Также отключает автопродление.
+    """
+    result = await db.execute(
+        select(User).where(User.telegram_id == telegram_user.id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.auto_renew_enabled = False
+    user.payment_method_id = None
+    user.card_last4 = None
+    user.card_brand = None
+    await db.commit()
+
+    logger.info(f"Payment method deleted for user {telegram_user.id}")
+
+    return {"status": "ok"}
 

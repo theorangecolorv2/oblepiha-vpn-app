@@ -28,15 +28,17 @@ class YooKassaService:
         tariff_id: str,
         telegram_id: int,
         user_id: int,
+        save_payment_method: bool = False,
     ) -> Optional[YKPaymentResponse]:
         """
         Создать платёж в YooKassa.
-        
+
         Args:
             tariff_id: ID тарифа
             telegram_id: Telegram ID пользователя
             user_id: ID пользователя в нашей БД
-        
+            save_payment_method: Сохранить способ оплаты для автоплатежей
+
         Returns:
             Объект платежа YooKassa или None
         """
@@ -46,7 +48,18 @@ class YooKassaService:
             return None
 
         try:
-            payment = YKPayment.create({
+            metadata = {
+                "tariff_id": tariff_id,
+                "telegram_id": str(telegram_id),
+                "user_id": str(user_id),
+                "days": str(tariff["days"]),
+            }
+
+            # Флаг для webhook что нужно включить автопродление
+            if save_payment_method:
+                metadata["setup_auto_renew"] = "true"
+
+            payment_data = {
                 "amount": {
                     "value": str(tariff["price"]) + ".00",
                     "currency": "RUB"
@@ -57,22 +70,80 @@ class YooKassaService:
                 },
                 "capture": True,
                 "description": f"Облепиха VPN - {tariff['name']}",
-                "metadata": {
-                    "tariff_id": tariff_id,
-                    "telegram_id": str(telegram_id),
-                    "user_id": str(user_id),
-                    "days": str(tariff["days"]),
-                }
-            }, uuid.uuid4())
+                "metadata": metadata,
+            }
+
+            # Сохранение способа оплаты для автопродления
+            if save_payment_method:
+                payment_data["save_payment_method"] = True
+                payment_data["merchant_customer_id"] = str(telegram_id)
+
+            payment = YKPayment.create(payment_data, uuid.uuid4())
 
             logger.info(
-                f"Created YooKassa payment: {payment.id} for user {telegram_id}, tariff {tariff_id}"
+                f"Created YooKassa payment: {payment.id} for user {telegram_id}, "
+                f"tariff {tariff_id}, save_method={save_payment_method}"
             )
-            
+
             return payment
 
         except Exception as e:
             logger.error(f"Error creating YooKassa payment: {e}")
+            return None
+
+    def create_auto_payment(
+        self,
+        payment_method_id: str,
+        amount: int,
+        telegram_id: int,
+        user_id: int,
+        days: int,
+        description: str = "Облепиха VPN - Автопродление",
+    ) -> Optional[YKPaymentResponse]:
+        """
+        Создать автоплатёж по сохранённому способу оплаты.
+
+        Платёж проходит без подтверждения пользователя (безакцептное списание).
+        Требует включённых рекуррентных платежей в YooKassa.
+
+        Args:
+            payment_method_id: ID сохранённого способа оплаты
+            amount: Сумма в рублях
+            telegram_id: Telegram ID пользователя
+            user_id: ID пользователя в нашей БД
+            days: Количество дней подписки
+            description: Описание платежа
+
+        Returns:
+            Объект платежа YooKassa или None
+        """
+        try:
+            payment = YKPayment.create({
+                "amount": {
+                    "value": str(amount) + ".00",
+                    "currency": "RUB"
+                },
+                "capture": True,
+                "payment_method_id": payment_method_id,
+                "description": description,
+                "metadata": {
+                    "tariff_id": "month",
+                    "telegram_id": str(telegram_id),
+                    "user_id": str(user_id),
+                    "days": str(days),
+                    "is_auto_payment": "true",
+                }
+            }, uuid.uuid4())
+
+            logger.info(
+                f"Created auto-payment: {payment.id} for user {telegram_id}, "
+                f"amount={amount}, payment_method={payment_method_id}"
+            )
+
+            return payment
+
+        except Exception as e:
+            logger.error(f"Error creating auto-payment for user {telegram_id}: {e}")
             return None
 
     def get_payment(self, payment_id: str) -> Optional[YKPaymentResponse]:

@@ -45,7 +45,14 @@ class User(Base):
     
     # Согласие с условиями пользования
     terms_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    
+
+    # Автопродление подписки
+    auto_renew_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    payment_method_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    card_last4: Mapped[Optional[str]] = mapped_column(String(4), nullable=True)
+    card_brand: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    last_notification_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     # Метаданные
     created_at: Mapped[datetime] = mapped_column(
         DateTime, 

@@ -63,9 +63,15 @@ class UserResponse(BaseModel):
     
     # Реферальная система
     referral_code: Optional[str] = None
-    
+
     # Согласие с условиями пользования
     terms_accepted_at: Optional[datetime] = None
+
+    # Автопродление
+    auto_renew_enabled: bool = False
+    has_payment_method: bool = False
+    card_last4: Optional[str] = None
+    card_brand: Optional[str] = None
 
 
 class UserStatsResponse(BaseModel):

@@ -21,6 +21,9 @@ yookassa==3.4.0
 # Telegram Bot
 aiogram==3.17.0
 
+# Scheduler for background tasks
+apscheduler==3.10.4
+
 # Telegram initData validation
 python-dateutil==2.9.0
 
