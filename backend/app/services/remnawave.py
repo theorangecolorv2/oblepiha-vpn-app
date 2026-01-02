@@ -170,16 +170,19 @@ class RemnawaveService:
     ) -> dict:
         """
         Продлить подписку пользователя.
-        
+
         Если подписка истекла - отсчёт от текущей даты.
         Если активна - добавляем к текущей дате истечения.
         Также назначает external squad если он настроен.
+        При продлении также устанавливает лимит трафика если он не был установлен.
         """
+        settings = self.settings
+
         # Сначала получаем текущие данные пользователя
         user = await self.get_user_by_uuid(uuid)
         if not user:
             raise RemnawaveError(f"User not found: {uuid}", status_code=404)
-        
+
         current_expire = user.get("expireAt")
         if current_expire:
             # Парсим текущую дату истечения
@@ -191,20 +194,27 @@ class RemnawaveService:
                 expire_dt = datetime.utcnow()
         else:
             expire_dt = datetime.utcnow()
-        
+
         # Если подписка уже истекла, отсчёт от сейчас
         now = datetime.utcnow()
         if expire_dt < now:
             expire_dt = now
-        
+
         # Добавляем дни
         new_expire = expire_dt + timedelta(days=days_to_add)
-        
+
         payload = {
             "uuid": uuid,
             "expireAt": new_expire.isoformat() + "Z",
             "status": "ACTIVE",
         }
+
+        # Устанавливаем лимит трафика если он не был установлен (0 = безлимит)
+        current_limit = user.get("trafficLimitBytes", 0)
+        if current_limit == 0 and settings.remnawave_traffic_limit_bytes > 0:
+            payload["trafficLimitBytes"] = settings.remnawave_traffic_limit_bytes
+            payload["trafficLimitStrategy"] = settings.remnawave_traffic_reset_strategy
+            logger.info(f"Setting traffic limit for {uuid}: {settings.remnawave_traffic_limit_bytes} bytes")
         
         # Сохраняем internal squad если он был назначен
         # В ответе API activeInternalSquads - это массив объектов с полем uuid,
@@ -273,12 +283,57 @@ class RemnawaveService:
         user = await self.get_user_by_uuid(uuid)
         if not user:
             return {"used": 0, "limit": 0}
-        
+
         traffic = user.get("userTraffic", {})
         return {
             "used": traffic.get("usedBytes", 0),
             "limit": user.get("trafficLimitBytes", 0),
         }
+
+    async def update_user_traffic_limit(
+        self,
+        uuid: str,
+        traffic_limit_bytes: int = None,
+        traffic_limit_strategy: str = None,
+    ) -> dict:
+        """
+        Обновить лимит трафика пользователя.
+
+        Args:
+            uuid: UUID пользователя в Remnawave
+            traffic_limit_bytes: Лимит трафика в байтах (None = из настроек)
+            traffic_limit_strategy: Стратегия сброса (None = из настроек)
+        """
+        settings = self.settings
+
+        payload = {
+            "uuid": uuid,
+            "trafficLimitBytes": traffic_limit_bytes or settings.remnawave_traffic_limit_bytes,
+            "trafficLimitStrategy": traffic_limit_strategy or settings.remnawave_traffic_reset_strategy,
+        }
+
+        logger.info(f"Updating traffic limit for {uuid}: {payload['trafficLimitBytes']} bytes")
+
+        result = await self._request("PATCH", "/api/users", json_data=payload)
+        return result.get("response")
+
+    async def get_all_users(self, start: int = 0, size: int = 100) -> list:
+        """
+        Получить список всех пользователей.
+
+        Args:
+            start: Начальный индекс
+            size: Количество записей
+
+        Returns:
+            Список пользователей
+        """
+        result = await self._request(
+            "GET",
+            "/api/users",
+            params={"start": start, "size": size}
+        )
+        return result.get("response", {}).get("users", [])
 
     async def disable_user(self, uuid: str) -> dict:
         """Отключить пользователя"""
