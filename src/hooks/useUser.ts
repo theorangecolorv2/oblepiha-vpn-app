@@ -15,7 +15,7 @@ interface UseUserReturn {
   
   // Методы
   refreshStats: () => Promise<void>
-  createPayment: (tariffId: string) => Promise<string | null>
+  createPayment: (tariffId: string, setupAutoRenew?: boolean) => Promise<string | null>
   acceptTerms: () => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -82,10 +82,10 @@ export function useUser(): UseUserReturn {
   }, [])
 
   // Создать платёж
-  const createPayment = useCallback(async (tariffId: string): Promise<string | null> => {
-    console.log('[useUser] createPayment called with tariffId:', tariffId)
+  const createPayment = useCallback(async (tariffId: string, setupAutoRenew = false): Promise<string | null> => {
+    console.log('[useUser] createPayment called with tariffId:', tariffId, 'setupAutoRenew:', setupAutoRenew)
     try {
-      const payment = await api.createPayment(tariffId)
+      const payment = await api.createPayment(tariffId, setupAutoRenew)
       console.log('[useUser] Payment created:', payment)
       return payment.confirmationUrl
     } catch (err) {

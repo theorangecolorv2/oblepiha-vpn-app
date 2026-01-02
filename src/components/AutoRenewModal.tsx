@@ -1,20 +1,34 @@
 interface AutoRenewModalProps {
   isOpen: boolean
   isEnabled: boolean
+  hasPaymentMethod: boolean
+  cardLast4: string | null
+  cardBrand: string | null
   onClose: () => void
   onToggle: (enabled: boolean) => void
+  onDeleteCard: () => void
 }
 
-export function AutoRenewModal({ 
-  isOpen, 
-  isEnabled, 
-  onClose, 
-  onToggle 
+export function AutoRenewModal({
+  isOpen,
+  isEnabled,
+  hasPaymentMethod,
+  cardLast4,
+  cardBrand,
+  onClose,
+  onToggle,
+  onDeleteCard
 }: AutoRenewModalProps) {
   if (!isOpen) return null
 
   const handleToggle = () => {
     onToggle(!isEnabled)
+  }
+
+  const handleDeleteCard = () => {
+    if (confirm('Вы уверены, что хотите удалить сохранённую карту? Автопродление будет отключено.')) {
+      onDeleteCard()
+    }
   }
 
   return (
@@ -67,7 +81,7 @@ export function AutoRenewModal({
                   </span>
                 </div>
                 <p className="text-chocolate/70 text-sm leading-relaxed mb-3">
-                  Ваша подписка будет автоматически продлеваться в конце каждого периода оплаты. 
+                  Ваша подписка будет автоматически продлеваться в конце каждого периода оплаты.
                   Это позволит вам не беспокоиться о продлении и всегда иметь доступ к VPN.
                 </p>
                 <p className="text-chocolate/50 text-xs leading-relaxed">
@@ -85,13 +99,32 @@ export function AutoRenewModal({
                   </span>
                 </div>
                 <p className="text-chocolate/70 text-sm leading-relaxed mb-3">
-                  Ваша подписка не будет продлеваться автоматически. 
+                  Ваша подписка не будет продлеваться автоматически.
                   Когда срок действия истечёт, вам нужно будет продлить её вручную.
                 </p>
                 <p className="text-chocolate/50 text-xs leading-relaxed">
-                  Вы можете включить автопродление в любой момент для удобства.
+                  {hasPaymentMethod
+                    ? 'Вы можете включить автопродление в любой момент для удобства.'
+                    : 'Чтобы включить автопродление, оплатите подписку с галочкой "Подключить автопродление".'}
                 </p>
               </>
+            )}
+
+            {/* Информация о карте */}
+            {hasPaymentMethod && cardLast4 && cardBrand && (
+              <div className="mt-4 p-3 bg-chocolate/5 rounded-xl border border-chocolate/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="material-symbols-outlined text-chocolate/60 text-lg">
+                    credit_card
+                  </span>
+                  <span className="text-chocolate/80 text-xs font-medium">
+                    Сохранённая карта
+                  </span>
+                </div>
+                <div className="text-chocolate font-medium text-sm">
+                  {cardBrand} •••• {cardLast4}
+                </div>
+              </div>
             )}
           </div>
 
@@ -107,11 +140,23 @@ export function AutoRenewModal({
             ) : (
               <button
                 onClick={handleToggle}
-                className="w-full py-3 px-4 bg-primary text-white rounded-xl font-semibold text-sm shadow-lg shadow-primary/30 hover:bg-[#d54d26] transition-colors active:scale-[0.98]"
+                disabled={!hasPaymentMethod}
+                className="w-full py-3 px-4 bg-primary text-white rounded-xl font-semibold text-sm shadow-lg shadow-primary/30 hover:bg-[#d54d26] transition-colors active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Включить автопродление
               </button>
             )}
+
+            {/* Кнопка удаления карты */}
+            {hasPaymentMethod && (
+              <button
+                onClick={handleDeleteCard}
+                className="w-full py-3 px-4 bg-red-50 border-2 border-red-200 text-red-600 rounded-xl font-medium text-sm hover:bg-red-100 hover:border-red-300 transition-colors active:scale-[0.98]"
+              >
+                Удалить сохранённую карту
+              </button>
+            )}
+
             <button
               onClick={onClose}
               className="w-full py-3 px-4 text-chocolate/60 text-sm font-medium hover:text-chocolate/80 transition-colors active:scale-[0.98]"

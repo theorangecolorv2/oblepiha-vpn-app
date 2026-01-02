@@ -50,3 +50,6 @@ temp/
 # Docker (не коммитим volumes и данные)
 *.sql
 docker-data/
+
+# Claude Code local settings
+.claude/settings.local.json

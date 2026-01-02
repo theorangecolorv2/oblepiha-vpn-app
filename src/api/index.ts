@@ -29,6 +29,10 @@ export interface UserResponse {
   referralCode: string | null
   termsAcceptedAt: string | null
   trialUsed: boolean
+  autoRenewEnabled: boolean
+  hasPaymentMethod: boolean
+  cardLast4: string | null
+  cardBrand: string | null
 }
 
 export interface PaymentResponse {
@@ -130,10 +134,13 @@ export const api = {
   /**
    * Создать платёж для покупки тарифа
    */
-  async createPayment(tariffId: string): Promise<PaymentResponse> {
+  async createPayment(tariffId: string, setupAutoRenew = false): Promise<PaymentResponse> {
     return apiFetch<PaymentResponse>('/api/payments', {
       method: 'POST',
-      body: JSON.stringify({ tariff_id: tariffId }),
+      body: JSON.stringify({
+        tariff_id: tariffId,
+        setup_auto_renew: setupAutoRenew
+      }),
     })
   },
   
@@ -150,6 +157,53 @@ export const api = {
   async acceptTerms(): Promise<void> {
     return apiFetch<void>('/api/users/me/accept-terms', {
       method: 'POST',
+    })
+  },
+
+  /**
+   * Получить статус автопродления
+   */
+  async getAutoRenewStatus(): Promise<{
+    enabled: boolean
+    hasPaymentMethod: boolean
+    cardLast4: string | null
+    cardBrand: string | null
+  }> {
+    return apiFetch('/api/users/me/auto-renew/status')
+  },
+
+  /**
+   * Включить автопродление
+   */
+  async enableAutoRenew(): Promise<{
+    status: string
+    autoRenewEnabled: boolean
+    cardLast4: string | null
+    cardBrand: string | null
+  }> {
+    return apiFetch('/api/users/me/auto-renew/enable', {
+      method: 'POST',
+    })
+  },
+
+  /**
+   * Отключить автопродление
+   */
+  async disableAutoRenew(): Promise<{
+    status: string
+    autoRenewEnabled: boolean
+  }> {
+    return apiFetch('/api/users/me/auto-renew/disable', {
+      method: 'POST',
+    })
+  },
+
+  /**
+   * Удалить сохраненный способ оплаты
+   */
+  async deletePaymentMethod(): Promise<{ status: string }> {
+    return apiFetch('/api/users/me/auto-renew/payment-method', {
+      method: 'DELETE',
     })
   },
 }
