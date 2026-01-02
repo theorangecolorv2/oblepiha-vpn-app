@@ -5,7 +5,9 @@
       "WebFetch(domain:yookassa.ru)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc --noEmit)"
     ]
   }
 }

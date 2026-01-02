@@ -7,16 +7,24 @@ interface StatsProps {
   trafficLeftGb: number
   totalTrafficGb: number
   autoRenewEnabled?: boolean
+  hasPaymentMethod?: boolean
+  cardLast4?: string | null
+  cardBrand?: string | null
   onAutoRenewToggle?: (enabled: boolean) => void
+  onDeleteCard?: () => void
 }
 
-export function Stats({ 
-  isActive, 
-  daysLeft, 
-  trafficLeftGb, 
+export function Stats({
+  isActive,
+  daysLeft,
+  trafficLeftGb,
   totalTrafficGb,
-  autoRenewEnabled = true,
-  onAutoRenewToggle
+  autoRenewEnabled = false,
+  hasPaymentMethod = false,
+  cardLast4 = null,
+  cardBrand = null,
+  onAutoRenewToggle,
+  onDeleteCard
 }: StatsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -78,8 +86,15 @@ export function Stats({
       <AutoRenewModal
         isOpen={isModalOpen}
         isEnabled={autoRenewEnabled}
+        hasPaymentMethod={hasPaymentMethod}
+        cardLast4={cardLast4}
+        cardBrand={cardBrand}
         onClose={() => setIsModalOpen(false)}
         onToggle={handleToggle}
+        onDeleteCard={() => {
+          onDeleteCard?.()
+          setIsModalOpen(false)
+        }}
       />
     </>
   )

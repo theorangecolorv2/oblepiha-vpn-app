@@ -2,17 +2,18 @@ import { useState, useEffect } from 'react'
 import { Header, Stats, TariffCard, Button, BottomNav, ConnectionScreen, ReferralScreen, TermsAgreementModal } from './components'
 import { useTelegram } from './hooks/useTelegram'
 import { useUser } from './hooks/useUser'
+import { api } from './api'
 import { tariffs as fallbackTariffs } from './data/tariffs'
 import type { Tariff } from './types'
 
 function App() {
   const { firstName, userOS, tg } = useTelegram()
-  const { isLoading, error, stats, tariffs, user, createPayment, refreshStats, acceptTerms } = useUser()
+  const { isLoading, error, stats, tariffs, user, createPayment, refreshStats, acceptTerms, refreshUser } = useUser()
   
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null)
   const [activeTab, setActiveTab] = useState<'shop' | 'vpn' | 'friends'>('shop')
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
-  const [autoRenewEnabled, setAutoRenewEnabled] = useState(true) // По умолчанию включено
+  const [setupAutoRenewForPayment, setSetupAutoRenewForPayment] = useState(true) // Для чекбокса при оплате
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [pendingPayment, setPendingPayment] = useState<(() => void) | null>(null)
 
@@ -62,10 +63,10 @@ function App() {
   const proceedWithPayment = async (tariffId: string) => {
     setIsPaymentLoading(true)
     setPaymentError(null)
-    
+
     try {
-      console.log('[Payment] Creating payment for tariff:', tariffId, 'setupAutoRenew:', autoRenewEnabled)
-      const confirmationUrl = await createPayment(tariffId, autoRenewEnabled)
+      console.log('[Payment] Creating payment for tariff:', tariffId, 'setupAutoRenew:', setupAutoRenewForPayment)
+      const confirmationUrl = await createPayment(tariffId, setupAutoRenewForPayment)
       console.log('[Payment] Got confirmation URL:', confirmationUrl)
       
       if (confirmationUrl) {
@@ -149,10 +150,32 @@ function App() {
         return (
           <>
             <Header firstName={firstName} />
-            <Stats 
-              {...userStats} 
-              autoRenewEnabled={autoRenewEnabled}
-              onAutoRenewToggle={setAutoRenewEnabled}
+            <Stats
+              {...userStats}
+              autoRenewEnabled={user?.autoRenewEnabled || false}
+              hasPaymentMethod={user?.hasPaymentMethod || false}
+              cardLast4={user?.cardLast4 || null}
+              cardBrand={user?.cardBrand || null}
+              onAutoRenewToggle={async (enabled) => {
+                try {
+                  if (enabled) {
+                    await api.enableAutoRenew()
+                  } else {
+                    await api.disableAutoRenew()
+                  }
+                  await refreshUser()
+                } catch (err) {
+                  console.error('Failed to toggle auto-renew:', err)
+                }
+              }}
+              onDeleteCard={async () => {
+                try {
+                  await api.deletePaymentMethod()
+                  await refreshUser()
+                } catch (err) {
+                  console.error('Failed to delete payment method:', err)
+                }
+              }}
             />
             
             {/* Выбор тарифа */}
@@ -190,8 +213,8 @@ function App() {
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={autoRenewEnabled}
-                      onChange={(e) => setAutoRenewEnabled(e.target.checked)}
+                      checked={setupAutoRenewForPayment}
+                      onChange={(e) => setSetupAutoRenewForPayment(e.target.checked)}
                       className="mt-1 w-5 h-5 text-primary border-chocolate/30 rounded focus:ring-primary focus:ring-2"
                     />
                     <div className="flex-1">
