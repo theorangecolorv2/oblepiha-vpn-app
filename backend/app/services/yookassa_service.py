@@ -28,17 +28,18 @@ class YooKassaService:
         tariff_id: str,
         telegram_id: int,
         user_id: int,
+        save_payment_method: bool = False,
     ) -> Optional[YKPaymentResponse]:
         """
         Создать платёж в YooKassa.
-
-        Всегда предлагает сохранить карту для автоплатежей.
-        ЮКасса покажет пользователю чекбокс на странице оплаты.
 
         Args:
             tariff_id: ID тарифа
             telegram_id: Telegram ID пользователя
             user_id: ID пользователя в нашей БД
+            save_payment_method: Сохранить способ оплаты для автоплатежей.
+                ВАЖНО: если True, ЮКасса покажет только способы оплаты,
+                поддерживающие сохранение (карты, СБП с поддержкой, SberPay, T-Pay).
 
         Returns:
             Объект платежа YooKassa или None
@@ -68,16 +69,19 @@ class YooKassaService:
                 "capture": True,
                 "description": f"Облепиха VPN - {tariff['name']}",
                 "metadata": metadata,
-                # Всегда предлагаем сохранить карту - ЮКасса покажет чекбокс на странице оплаты
-                "save_payment_method": True,
-                "merchant_customer_id": str(telegram_id),
             }
+
+            # Сохранение способа оплаты для автопродления
+            # Поддерживается: карты, YooMoney, СБП (не все банки), SberPay, T-Pay
+            if save_payment_method:
+                payment_data["save_payment_method"] = True
+                payment_data["merchant_customer_id"] = str(telegram_id)
 
             payment = YKPayment.create(payment_data, uuid.uuid4())
 
             logger.info(
                 f"Created YooKassa payment: {payment.id} for user {telegram_id}, "
-                f"tariff {tariff_id}"
+                f"tariff {tariff_id}, save_method={save_payment_method}"
             )
 
             return payment

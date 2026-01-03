@@ -61,11 +61,12 @@ async def create_payment(
         )
     
     # Создаём платёж в YooKassa
-    # Всегда предлагаем сохранить карту - ЮКасса покажет чекбокс на странице оплаты
+    # save_payment_method=True ограничивает способы оплаты до тех, что поддерживают сохранение
     yookassa_payment = yookassa.create_payment(
         tariff_id=payment_data.tariff_id,
         telegram_id=telegram_user.id,
         user_id=user.id,
+        save_payment_method=payment_data.setup_auto_renew,
     )
     
     if not yookassa_payment:
