@@ -42,9 +42,40 @@ export const config = {
 
 // Тестовые данные для разработки без Telegram
 export const devUser = {
-  firstName: 'Александр',
+  firstName: 'Вадим',
   lastName: 'Тест',
   username: 'test_user',
+}
+
+// Моковые данные пользователя с привязанной картой (для скриншотов ЮKassa)
+export const mockUserData = {
+  user: {
+    id: 1,
+    telegramId: 123456789,
+    telegramUsername: 'vadim_test',
+    firstName: 'Вадим',
+    isActive: true,
+    subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 дней
+    daysLeft: 30,
+    subscriptionUrl: 'vless://test-subscription-url',
+    trafficUsedBytes: 10 * 1024 * 1024 * 1024, // 10 GB
+    trafficLimitBytes: 500 * 1024 * 1024 * 1024, // 500 GB
+    referralCode: 'VADIM2024',
+    termsAcceptedAt: new Date().toISOString(),
+    trialUsed: true,
+    autoRenewEnabled: true,
+    hasPaymentMethod: true,
+    cardLast4: '4242',
+    cardBrand: 'Visa',
+  },
+  stats: {
+    isActive: true,
+    daysLeft: 30,
+    totalDays: 30,
+    trafficLeftGb: 490,
+    totalTrafficGb: 500,
+    subscriptionUrl: 'vless://test-subscription-url',
+  },
 }
 
 // Тестовый ключ подписки для разработки

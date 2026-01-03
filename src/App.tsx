@@ -2,13 +2,12 @@ import { useState, useEffect } from 'react'
 import { Header, Stats, TariffCard, Button, BottomNav, ConnectionScreen, ReferralScreen, TermsAgreementModal } from './components'
 import { useTelegram } from './hooks/useTelegram'
 import { useUser } from './hooks/useUser'
-import { api } from './api'
 import { tariffs as fallbackTariffs } from './data/tariffs'
 import type { Tariff } from './types'
 
 function App() {
   const { firstName, userOS, tg } = useTelegram()
-  const { isLoading, error, stats, tariffs, user, createPayment, refreshStats, acceptTerms, refreshUser } = useUser()
+  const { isLoading, error, stats, tariffs, user, createPayment, refreshStats, acceptTerms, toggleAutoRenew, deletePaymentMethod } = useUser()
   
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null)
   const [activeTab, setActiveTab] = useState<'shop' | 'vpn' | 'friends'>('shop')
@@ -158,20 +157,14 @@ function App() {
               cardBrand={user?.cardBrand || null}
               onAutoRenewToggle={async (enabled) => {
                 try {
-                  if (enabled) {
-                    await api.enableAutoRenew()
-                  } else {
-                    await api.disableAutoRenew()
-                  }
-                  await refreshUser()
+                  await toggleAutoRenew(enabled)
                 } catch (err) {
                   console.error('Failed to toggle auto-renew:', err)
                 }
               }}
               onDeleteCard={async () => {
                 try {
-                  await api.deletePaymentMethod()
-                  await refreshUser()
+                  await deletePaymentMethod()
                 } catch (err) {
                   console.error('Failed to delete payment method:', err)
                 }
