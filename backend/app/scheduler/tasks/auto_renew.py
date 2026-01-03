@@ -46,19 +46,25 @@ async def process_auto_renewals() -> None:
     Критерии выборки:
     - auto_renew_enabled = True
     - payment_method_id IS NOT NULL
-    - subscription_expires_at между NOW - 1 час и NOW + 1 час
+    - subscription_expires_at между NOW - 12 часов и NOW + 24 часа
     - Нет успешного автоплатежа за последние 24 часа
 
     Логика:
     1. Создаём платёж в YooKassa (без подтверждения)
     2. Если успешно - продлеваем в Remnawave, уведомляем
-    3. Если ошибка - уведомляем, ставим retry через 6 часов
+    3. Если ошибка - уведомляем, повторяем при следующем запуске (до 3 попыток за 24 часа)
+
+    Расширенное окно позволяет:
+    - Продлить подписку заранее (за сутки до истечения)
+    - Повторить попытку если предыдущая не удалась
+    - Не потерять пользователей если scheduler пропустил запуск
     """
     logger.info("Starting auto-renewal task...")
 
     now = datetime.utcnow()
-    window_start = now - timedelta(hours=1)
-    window_end = now + timedelta(hours=1)
+    # Расширенное окно: от -12 часов (для ретраев) до +24 часов (продление заранее)
+    window_start = now - timedelta(hours=12)
+    window_end = now + timedelta(hours=24)
     recent_payment_threshold = now - timedelta(hours=24)
 
     success_count = 0

@@ -61,11 +61,11 @@ async def create_payment(
         )
     
     # Создаём платёж в YooKassa
+    # Всегда предлагаем сохранить карту - ЮКасса покажет чекбокс на странице оплаты
     yookassa_payment = yookassa.create_payment(
         tariff_id=payment_data.tariff_id,
         telegram_id=telegram_user.id,
         user_id=user.id,
-        save_payment_method=payment_data.setup_auto_renew,
     )
     
     if not yookassa_payment:
@@ -228,6 +228,7 @@ async def yookassa_webhook(
                     logger.info(f"Trial period marked as used for user {user.telegram_id}")
 
                 # Сохраняем данные карты в user если карта была сохранена
+                # Если пользователь согласился сохранить карту на странице ЮКассы - включаем автопродление
                 if payment_method.get("saved") and payment_method_id:
                     user.payment_method_id = payment_method_id
                     # Сохраняем данные карты для отображения в UI
@@ -235,11 +236,9 @@ async def yookassa_webhook(
                     if card_info:
                         user.card_last4 = card_info.get("last4")
                         user.card_brand = card_info.get("card_type")
-                    # Включаем автопродление если это был платёж для настройки
-                    metadata = payment_object.get("metadata", {})
-                    if metadata.get("setup_auto_renew") == "true":
-                        user.auto_renew_enabled = True
-                        logger.info(f"Auto-renew enabled for user {user.telegram_id}")
+                    # Автоматически включаем автопродление при сохранении карты
+                    user.auto_renew_enabled = True
+                    logger.info(f"Card saved, auto-renew enabled for user {user.telegram_id}")
 
                 logger.info(
                     f"Subscription extended: user={user.telegram_id}, days={payment.days}"

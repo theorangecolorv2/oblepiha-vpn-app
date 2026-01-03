@@ -12,7 +12,6 @@ function App() {
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null)
   const [activeTab, setActiveTab] = useState<'shop' | 'vpn' | 'friends'>('shop')
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
-  const [setupAutoRenewForPayment, setSetupAutoRenewForPayment] = useState(true) // Для чекбокса при оплате
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [pendingPayment, setPendingPayment] = useState<(() => void) | null>(null)
 
@@ -64,8 +63,9 @@ function App() {
     setPaymentError(null)
 
     try {
-      console.log('[Payment] Creating payment for tariff:', tariffId, 'setupAutoRenew:', setupAutoRenewForPayment)
-      const confirmationUrl = await createPayment(tariffId, setupAutoRenewForPayment)
+      console.log('[Payment] Creating payment for tariff:', tariffId)
+      // Всегда передаём true - ЮКасса сама покажет чекбокс сохранения карты на странице оплаты
+      const confirmationUrl = await createPayment(tariffId, true)
       console.log('[Payment] Got confirmation URL:', confirmationUrl)
       
       if (confirmationUrl) {
@@ -197,29 +197,6 @@ function App() {
               {paymentError && (
                 <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl">
                   <p className="text-red-600 text-sm">{paymentError}</p>
-                </div>
-              )}
-
-              {/* Чекбокс автопродления */}
-              {selectedTariff && (
-                <div className="mt-4 p-4 bg-surface-light/50 rounded-2xl">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={setupAutoRenewForPayment}
-                      onChange={(e) => setSetupAutoRenewForPayment(e.target.checked)}
-                      className="mt-1 w-5 h-5 text-primary border-chocolate/30 rounded focus:ring-primary focus:ring-2"
-                    />
-                    <div className="flex-1">
-                      <div className="text-chocolate font-medium text-sm mb-1">
-                        Подключить автопродление
-                      </div>
-                      <div className="text-chocolate/60 text-xs leading-relaxed">
-                        Подписка будет автоматически продлеваться каждый месяц.
-                        Вы можете отключить это в любой момент в настройках.
-                      </div>
-                    </div>
-                  </label>
                 </div>
               )}
 
