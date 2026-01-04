@@ -64,13 +64,18 @@ export function AutoRenewModal({
 
   // Формируем отображение платёжного метода
   const renderPaymentMethodInfo = () => {
-    if (paymentMethodType === 'bank_card' && cardLast4 && cardBrand) {
+    // Для карт (включая старых пользователей без paymentMethodType)
+    if (cardLast4 && cardBrand) {
       return `${cardBrand} •••• ${cardLast4}`
     }
     if (paymentMethodType === 'sbp') {
       return sbpPhone ? `СБП •••• ${sbpPhone}` : 'СБП'
     }
-    return getPaymentMethodName(paymentMethodType)
+    if (paymentMethodType) {
+      return getPaymentMethodName(paymentMethodType)
+    }
+    // Fallback для старых пользователей с картой но без type
+    return 'Способ оплаты сохранён'
   }
 
   return (
@@ -147,17 +152,17 @@ export function AutoRenewModal({
                 <p className="text-chocolate/50 text-xs leading-relaxed">
                   {hasPaymentMethod
                     ? 'Вы можете включить автопродление в любой момент для удобства.'
-                    : 'Чтобы включить автопродление, оплатите подписку с галочкой "Подключить автопродление".'}
+                    : 'Чтобы включить автопродление, оплатите подписку и сохраните способ оплаты на странице ЮKassa.'}
                 </p>
               </>
             )}
 
             {/* Информация о способе оплаты */}
-            {hasPaymentMethod && paymentMethodType && (
+            {hasPaymentMethod && (
               <div className="mt-4 p-3 bg-chocolate/5 rounded-xl border border-chocolate/10">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="material-symbols-outlined text-chocolate/60 text-lg">
-                    {getPaymentMethodIcon(paymentMethodType)}
+                    {cardLast4 ? 'credit_card' : getPaymentMethodIcon(paymentMethodType)}
                   </span>
                   <span className="text-chocolate/80 text-xs font-medium">
                     Сохранённый способ оплаты
