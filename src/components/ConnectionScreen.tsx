@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { UserOS } from '../hooks/useTelegram'
 import { config, DEV_SUBSCRIPTION_KEY } from '../config'
 import { STRINGS } from '../constants'
+import { AppStoreModal } from './AppStoreModal'
 
 // Получаем Telegram WebApp
 const tg = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
@@ -31,12 +32,18 @@ const getAppConfig = (os: OSTab) => ({
 export function ConnectionScreen({ userOS, subscriptionUrl, isActive = false }: ConnectionScreenProps) {
   const [selectedOS, setSelectedOS] = useState<OSTab>(userOS)
   const [copySuccess, setCopySuccess] = useState(false)
+  const [showAppStoreModal, setShowAppStoreModal] = useState(false)
   const appConfig = getAppConfig(selectedOS)
-  
+
   // Используем URL подписки или тестовый в режиме разработки
   const currentKey = subscriptionUrl || (config.devMode ? DEV_SUBSCRIPTION_KEY : '')
 
   const handleDownload = () => {
+    // Для iOS показываем модалку выбора App Store
+    if (selectedOS === 'ios') {
+      setShowAppStoreModal(true)
+      return
+    }
     window.open(appConfig.downloadUrl, '_blank')
   }
 
@@ -247,12 +254,18 @@ export function ConnectionScreen({ userOS, subscriptionUrl, isActive = false }: 
       </button>
 
       {/* Ссылка на FAQ и условия */}
-      <a 
+      <a
         href="/info"
         className="text-[11px] text-chocolate/40 hover:text-chocolate/60 transition-colors text-center"
       >
         FAQ и условия использования
       </a>
+
+      {/* Модалка выбора App Store */}
+      <AppStoreModal
+        isOpen={showAppStoreModal}
+        onClose={() => setShowAppStoreModal(false)}
+      />
     </div>
   )
 }

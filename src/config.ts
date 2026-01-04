@@ -17,9 +17,10 @@ export const config = {
 
   // Ссылки на скачивание приложения Happ
   happDownload: {
-    ios: import.meta.env.VITE_HAPP_IOS || 'https://apps.apple.com/app/happ-vpn/id1234567890',
-    android: import.meta.env.VITE_HAPP_ANDROID || 'https://play.google.com/store/apps/details?id=com.happ.vpn',
-    windows: import.meta.env.VITE_HAPP_WINDOWS || 'https://happ.su/download/windows',
+    ios: import.meta.env.VITE_HAPP_IOS || 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215',
+    iosRu: import.meta.env.VITE_HAPP_IOS_RU || 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973',
+    android: import.meta.env.VITE_HAPP_ANDROID || 'https://play.google.com/store/apps/details?id=com.happproxy',
+    windows: import.meta.env.VITE_HAPP_WINDOWS || 'https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe',
   },
 
   // Ссылки на скачивание v2Ray
