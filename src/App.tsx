@@ -12,7 +12,6 @@ function App() {
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null)
   const [activeTab, setActiveTab] = useState<'shop' | 'vpn' | 'friends'>('shop')
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
-  const [savePaymentMethod, setSavePaymentMethod] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [pendingPayment, setPendingPayment] = useState<(() => void) | null>(null)
 
@@ -64,8 +63,8 @@ function App() {
     setPaymentError(null)
 
     try {
-      console.log('[Payment] Creating payment for tariff:', tariffId, 'savePaymentMethod:', savePaymentMethod)
-      const confirmationUrl = await createPayment(tariffId, savePaymentMethod)
+      console.log('[Payment] Creating payment for tariff:', tariffId)
+      const confirmationUrl = await createPayment(tariffId)
       console.log('[Payment] Got confirmation URL:', confirmationUrl)
       
       if (confirmationUrl) {
@@ -153,8 +152,10 @@ function App() {
               {...userStats}
               autoRenewEnabled={user?.autoRenewEnabled || false}
               hasPaymentMethod={user?.hasPaymentMethod || false}
+              paymentMethodType={user?.paymentMethodType || null}
               cardLast4={user?.cardLast4 || null}
               cardBrand={user?.cardBrand || null}
+              sbpPhone={user?.sbpPhone || null}
               onAutoRenewToggle={async (enabled) => {
                 try {
                   await toggleAutoRenew(enabled)
@@ -162,7 +163,7 @@ function App() {
                   console.error('Failed to toggle auto-renew:', err)
                 }
               }}
-              onDeleteCard={async () => {
+              onDeletePaymentMethod={async () => {
                 try {
                   await deletePaymentMethod()
                 } catch (err) {
@@ -197,29 +198,6 @@ function App() {
               {paymentError && (
                 <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl">
                   <p className="text-red-600 text-sm">{paymentError}</p>
-                </div>
-              )}
-
-              {/* Чекбокс автопродления - только если нет сохранённой карты */}
-              {selectedTariff && !user?.hasPaymentMethod && (
-                <div className="mt-4 p-4 bg-surface-light/50 rounded-2xl">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={savePaymentMethod}
-                      onChange={(e) => setSavePaymentMethod(e.target.checked)}
-                      className="mt-1 w-5 h-5 text-primary border-chocolate/30 rounded focus:ring-primary focus:ring-2"
-                    />
-                    <div className="flex-1">
-                      <div className="text-chocolate font-medium text-sm mb-1">
-                        Включить автопродление
-                      </div>
-                      <div className="text-chocolate/60 text-xs leading-relaxed">
-                        Сохраним способ оплаты для автоматического продления.
-                        Поддерживаются карты, СБП, SberPay и T-Pay.
-                      </div>
-                    </div>
-                  </label>
                 </div>
               )}
 

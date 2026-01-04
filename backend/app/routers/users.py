@@ -166,8 +166,10 @@ async def get_current_user_data(
         trial_used=user.trial_used,
         auto_renew_enabled=user.auto_renew_enabled,
         has_payment_method=bool(user.payment_method_id),
+        payment_method_type=user.payment_method_type,
         card_last4=user.card_last4,
         card_brand=user.card_brand,
+        sbp_phone=user.sbp_phone,
     )
 
 
@@ -296,8 +298,10 @@ async def get_auto_renew_status(
     return {
         "enabled": user.auto_renew_enabled,
         "has_payment_method": bool(user.payment_method_id),
+        "payment_method_type": user.payment_method_type,
         "card_last4": user.card_last4,
         "card_brand": user.card_brand,
+        "sbp_phone": user.sbp_phone,
     }
 
 
@@ -385,8 +389,10 @@ async def delete_payment_method(
 
     user.auto_renew_enabled = False
     user.payment_method_id = None
+    user.payment_method_type = None
     user.card_last4 = None
     user.card_brand = None
+    user.sbp_phone = None
     await db.commit()
 
     logger.info(f"Payment method deleted for user {telegram_user.id}")

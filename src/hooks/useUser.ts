@@ -24,7 +24,7 @@ interface UseUserReturn {
 
   // Методы
   refreshStats: () => Promise<void>
-  createPayment: (tariffId: string, setupAutoRenew?: boolean) => Promise<string | null>
+  createPayment: (tariffId: string) => Promise<string | null>
   acceptTerms: () => Promise<void>
   refreshUser: () => Promise<void>
   toggleAutoRenew: (enabled: boolean) => Promise<void>
@@ -118,11 +118,11 @@ export function useUser(): UseUserReturn {
     }
   }, [useMockData])
 
-  // Создать платёж
-  const createPayment = useCallback(async (tariffId: string, setupAutoRenew = false): Promise<string | null> => {
-    console.log('[useUser] createPayment called with tariffId:', tariffId, 'setupAutoRenew:', setupAutoRenew)
+  // Создать платёж (всегда с сохранением способа оплаты - пользователь соглашается в виджете YooKassa)
+  const createPayment = useCallback(async (tariffId: string): Promise<string | null> => {
+    console.log('[useUser] createPayment called with tariffId:', tariffId)
     try {
-      const payment = await api.createPayment(tariffId, setupAutoRenew)
+      const payment = await api.createPayment(tariffId, true) // Всегда true - согласие в виджете YooKassa
       console.log('[useUser] Payment created:', payment)
       return payment.confirmationUrl
     } catch (err) {
@@ -193,8 +193,10 @@ export function useUser(): UseUserReturn {
       setUser(prev => prev ? {
         ...prev,
         hasPaymentMethod: false,
+        paymentMethodType: null,
         cardLast4: null,
         cardBrand: null,
+        sbpPhone: null,
         autoRenewEnabled: false,
       } : prev)
       return

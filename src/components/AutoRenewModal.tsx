@@ -2,22 +2,52 @@ interface AutoRenewModalProps {
   isOpen: boolean
   isEnabled: boolean
   hasPaymentMethod: boolean
+  paymentMethodType: string | null
   cardLast4: string | null
   cardBrand: string | null
+  sbpPhone: string | null
   onClose: () => void
   onToggle: (enabled: boolean) => void
-  onDeleteCard: () => void
+  onDeletePaymentMethod: () => void
+}
+
+// Получить название типа платёжного метода на русском
+function getPaymentMethodName(type: string | null): string {
+  switch (type) {
+    case 'bank_card': return 'Банковская карта'
+    case 'sbp': return 'СБП'
+    case 'sber_pay': return 'SberPay'
+    case 'tinkoff_bank': return 'T-Pay'
+    case 'yoo_money': return 'ЮMoney'
+    case 'mir_pay': return 'Mir Pay'
+    default: return 'Способ оплаты'
+  }
+}
+
+// Получить иконку для типа платёжного метода
+function getPaymentMethodIcon(type: string | null): string {
+  switch (type) {
+    case 'bank_card': return 'credit_card'
+    case 'sbp': return 'account_balance'
+    case 'sber_pay': return 'account_balance'
+    case 'tinkoff_bank': return 'account_balance'
+    case 'yoo_money': return 'wallet'
+    case 'mir_pay': return 'credit_card'
+    default: return 'payments'
+  }
 }
 
 export function AutoRenewModal({
   isOpen,
   isEnabled,
   hasPaymentMethod,
+  paymentMethodType,
   cardLast4,
   cardBrand,
+  sbpPhone,
   onClose,
   onToggle,
-  onDeleteCard
+  onDeletePaymentMethod
 }: AutoRenewModalProps) {
   if (!isOpen) return null
 
@@ -25,10 +55,22 @@ export function AutoRenewModal({
     onToggle(!isEnabled)
   }
 
-  const handleDeleteCard = () => {
-    if (confirm('Вы уверены, что хотите удалить сохранённую карту? Автопродление будет отключено.')) {
-      onDeleteCard()
+  const handleDeletePaymentMethod = () => {
+    const methodName = getPaymentMethodName(paymentMethodType)
+    if (confirm(`Вы уверены, что хотите удалить сохранённый способ оплаты (${methodName})? Автопродление будет отключено.`)) {
+      onDeletePaymentMethod()
     }
+  }
+
+  // Формируем отображение платёжного метода
+  const renderPaymentMethodInfo = () => {
+    if (paymentMethodType === 'bank_card' && cardLast4 && cardBrand) {
+      return `${cardBrand} •••• ${cardLast4}`
+    }
+    if (paymentMethodType === 'sbp') {
+      return sbpPhone ? `СБП •••• ${sbpPhone}` : 'СБП'
+    }
+    return getPaymentMethodName(paymentMethodType)
   }
 
   return (
@@ -110,19 +152,19 @@ export function AutoRenewModal({
               </>
             )}
 
-            {/* Информация о карте */}
-            {hasPaymentMethod && cardLast4 && cardBrand && (
+            {/* Информация о способе оплаты */}
+            {hasPaymentMethod && paymentMethodType && (
               <div className="mt-4 p-3 bg-chocolate/5 rounded-xl border border-chocolate/10">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="material-symbols-outlined text-chocolate/60 text-lg">
-                    credit_card
+                    {getPaymentMethodIcon(paymentMethodType)}
                   </span>
                   <span className="text-chocolate/80 text-xs font-medium">
-                    Сохранённая карта
+                    Сохранённый способ оплаты
                   </span>
                 </div>
                 <div className="text-chocolate font-medium text-sm">
-                  {cardBrand} •••• {cardLast4}
+                  {renderPaymentMethodInfo()}
                 </div>
               </div>
             )}
@@ -147,13 +189,13 @@ export function AutoRenewModal({
               </button>
             )}
 
-            {/* Кнопка удаления карты */}
+            {/* Кнопка удаления способа оплаты */}
             {hasPaymentMethod && (
               <button
-                onClick={handleDeleteCard}
+                onClick={handleDeletePaymentMethod}
                 className="w-full py-3 px-4 bg-red-50 border-2 border-red-200 text-red-600 rounded-xl font-medium text-sm hover:bg-red-100 hover:border-red-300 transition-colors active:scale-[0.98]"
               >
-                Удалить сохранённую карту
+                Удалить способ оплаты
               </button>
             )}
 

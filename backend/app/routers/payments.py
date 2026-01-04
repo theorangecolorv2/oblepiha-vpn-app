@@ -228,18 +228,38 @@ async def yookassa_webhook(
                     user.trial_used = True
                     logger.info(f"Trial period marked as used for user {user.telegram_id}")
 
-                # Сохраняем данные карты в user если карта была сохранена
-                # Если пользователь согласился сохранить карту на странице ЮКассы - включаем автопродление
+                # Сохраняем данные способа оплаты если он был сохранён
+                # Если пользователь согласился сохранить способ оплаты на странице ЮКассы - включаем автопродление
                 if payment_method.get("saved") and payment_method_id:
                     user.payment_method_id = payment_method_id
-                    # Сохраняем данные карты для отображения в UI
-                    card_info = payment_method.get("card", {})
-                    if card_info:
-                        user.card_last4 = card_info.get("last4")
-                        user.card_brand = card_info.get("card_type")
-                    # Автоматически включаем автопродление при сохранении карты
+                    payment_type = payment_method.get("type")
+                    user.payment_method_type = payment_type
+
+                    # Сохраняем данные в зависимости от типа
+                    if payment_type == "bank_card":
+                        card_info = payment_method.get("card", {})
+                        if card_info:
+                            user.card_last4 = card_info.get("last4")
+                            user.card_brand = card_info.get("card_type")
+                        user.sbp_phone = None
+                    elif payment_type == "sbp":
+                        # Для СБП: сохраняем телефон если есть
+                        sbp_info = payment_method.get("sbp", {})
+                        phone = sbp_info.get("phone")
+                        if phone:
+                            # Маскируем телефон: +7***1234
+                            user.sbp_phone = phone[-4:] if len(phone) >= 4 else phone
+                        user.card_last4 = None
+                        user.card_brand = None
+                    elif payment_type in ("sber_pay", "tinkoff_bank", "yoo_money", "mir_pay"):
+                        # Для кошельков/банков - просто сохраняем тип
+                        user.card_last4 = None
+                        user.card_brand = None
+                        user.sbp_phone = None
+
+                    # Автоматически включаем автопродление при сохранении способа оплаты
                     user.auto_renew_enabled = True
-                    logger.info(f"Card saved, auto-renew enabled for user {user.telegram_id}")
+                    logger.info(f"Payment method saved (type={payment_type}), auto-renew enabled for user {user.telegram_id}")
 
                 logger.info(
                     f"Subscription extended: user={user.telegram_id}, days={payment.days}"

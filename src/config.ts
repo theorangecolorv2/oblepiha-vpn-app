@@ -65,8 +65,10 @@ export const mockUserData = {
     trialUsed: true,
     autoRenewEnabled: true,
     hasPaymentMethod: true,
+    paymentMethodType: 'bank_card',
     cardLast4: '4242',
     cardBrand: 'Visa',
+    sbpPhone: null,
   },
   stats: {
     isActive: true,

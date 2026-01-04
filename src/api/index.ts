@@ -31,8 +31,10 @@ export interface UserResponse {
   trialUsed: boolean
   autoRenewEnabled: boolean
   hasPaymentMethod: boolean
+  paymentMethodType: string | null  // bank_card, sbp, sber_pay, tinkoff_bank, etc.
   cardLast4: string | null
   cardBrand: string | null
+  sbpPhone: string | null  // Последние 4 цифры телефона для СБП
 }
 
 export interface PaymentResponse {
@@ -166,8 +168,10 @@ export const api = {
   async getAutoRenewStatus(): Promise<{
     enabled: boolean
     hasPaymentMethod: boolean
+    paymentMethodType: string | null
     cardLast4: string | null
     cardBrand: string | null
+    sbpPhone: string | null
   }> {
     return apiFetch('/api/users/me/auto-renew/status')
   },

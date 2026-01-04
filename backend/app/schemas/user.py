@@ -73,8 +73,10 @@ class UserResponse(BaseModel):
     # Автопродление
     auto_renew_enabled: bool = False
     has_payment_method: bool = False
+    payment_method_type: Optional[str] = None  # bank_card, sbp, sber_pay, tinkoff_bank, etc.
     card_last4: Optional[str] = None
     card_brand: Optional[str] = None
+    sbp_phone: Optional[str] = None  # Последние 4 цифры телефона для СБП
 
 
 class UserStatsResponse(BaseModel):

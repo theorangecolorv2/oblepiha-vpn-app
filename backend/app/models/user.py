@@ -52,8 +52,10 @@ class User(Base):
     # Автопродление подписки
     auto_renew_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     payment_method_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    payment_method_type: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)  # bank_card, sbp, sber_pay, tinkoff_bank, etc.
     card_last4: Mapped[Optional[str]] = mapped_column(String(4), nullable=True)
     card_brand: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    sbp_phone: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)  # Для СБП: маскированный телефон
     last_notification_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # Метаданные
