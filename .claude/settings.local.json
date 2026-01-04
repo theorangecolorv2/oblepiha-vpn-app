@@ -7,7 +7,9 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(tree:*)",
       "Bash(npm run build:*)",
-      "Bash(npx tsc --noEmit)"
+      "Bash(npx tsc --noEmit)",
+      "Bash(mkdir:*)",
+      "Bash(python -m py_compile:*)"
     ]
   }
 }

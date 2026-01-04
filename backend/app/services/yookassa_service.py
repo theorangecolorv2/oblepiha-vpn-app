@@ -23,12 +23,70 @@ class YooKassaService:
         Configuration.secret_key = settings.yookassa_secret_key
         self.return_url = settings.yookassa_return_url
 
+    def _build_description(
+        self,
+        tariff_name: str,
+        telegram_id: int,
+        username: Optional[str] = None,
+        is_auto: bool = False,
+    ) -> str:
+        """
+        Формирует description для платежа YooKassa.
+
+        Формат:
+        - Ручной платёж: "Облепиха VPN - {тариф} | {tg_id} | @{username}"
+        - Автопродление: "Облепиха VPN - Авто | {tg_id} | @{username}"
+
+        YooKassa ограничивает description до 128 символов.
+        Если username отсутствует - не добавляем.
+
+        Args:
+            tariff_name: Название тарифа
+            telegram_id: Telegram ID пользователя
+            username: Telegram username (опционально)
+            is_auto: Это автопродление
+
+        Returns:
+            Строка description (макс 128 символов)
+        """
+        try:
+            # Базовая часть
+            if is_auto:
+                base = "Облепиха VPN - Авто"
+            else:
+                base = f"Облепиха VPN - {tariff_name}"
+
+            # Добавляем telegram_id
+            parts = [base, str(telegram_id)]
+
+            # Добавляем username если есть
+            if username:
+                # Убираем @ если уже есть, и добавляем свой
+                clean_username = username.lstrip("@")
+                parts.append(f"@{clean_username}")
+
+            description = " | ".join(parts)
+
+            # Обрезаем до 128 символов если нужно
+            if len(description) > 128:
+                description = description[:125] + "..."
+
+            return description
+
+        except Exception as e:
+            # Fallback на минимальное description - платёж не должен упасть
+            logger.warning(f"Error building payment description: {e}")
+            if is_auto:
+                return f"Облепиха VPN - Авто | {telegram_id}"
+            return f"Облепиха VPN - {tariff_name}"
+
     def create_payment(
         self,
         tariff_id: str,
         telegram_id: int,
         user_id: int,
         save_payment_method: bool = False,
+        username: Optional[str] = None,
     ) -> Optional[YKPaymentResponse]:
         """
         Создать платёж в YooKassa.
@@ -40,6 +98,7 @@ class YooKassaService:
             save_payment_method: Сохранить способ оплаты для автоплатежей.
                 ВАЖНО: если True, ЮКасса покажет только способы оплаты,
                 поддерживающие сохранение (карты, СБП с поддержкой, SberPay, T-Pay).
+            username: Telegram username (опционально, для аналитики)
 
         Returns:
             Объект платежа YooKassa или None
@@ -57,6 +116,16 @@ class YooKassaService:
                 "days": str(tariff["days"]),
             }
 
+            # Формируем description для аналитики
+            # Формат: "Облепиха VPN - {тариф} | {tg_id} | @{username}"
+            # YooKassa ограничивает description до 128 символов
+            description = self._build_description(
+                tariff_name=tariff["name"],
+                telegram_id=telegram_id,
+                username=username,
+                is_auto=False,
+            )
+
             payment_data = {
                 "amount": {
                     "value": str(tariff["price"]) + ".00",
@@ -67,7 +136,7 @@ class YooKassaService:
                     "return_url": self.return_url
                 },
                 "capture": True,
-                "description": f"Облепиха VPN - {tariff['name']}",
+                "description": description,
                 "metadata": metadata,
             }
 
@@ -97,7 +166,7 @@ class YooKassaService:
         telegram_id: int,
         user_id: int,
         days: int,
-        description: str = "Облепиха VPN - Автопродление",
+        username: Optional[str] = None,
     ) -> Optional[YKPaymentResponse]:
         """
         Создать автоплатёж по сохранённому способу оплаты.
@@ -111,12 +180,20 @@ class YooKassaService:
             telegram_id: Telegram ID пользователя
             user_id: ID пользователя в нашей БД
             days: Количество дней подписки
-            description: Описание платежа
+            username: Telegram username (опционально, для аналитики)
 
         Returns:
             Объект платежа YooKassa или None
         """
         try:
+            # Формируем description для аналитики
+            description = self._build_description(
+                tariff_name="Автопродление",
+                telegram_id=telegram_id,
+                username=username,
+                is_auto=True,
+            )
+
             payment = YKPayment.create({
                 "amount": {
                     "value": str(amount) + ".00",

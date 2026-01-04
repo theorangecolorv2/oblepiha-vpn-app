@@ -7,10 +7,10 @@
 
 Запуск:
     cd backend
-    python set_traffic_limits.py
+    python scripts/set_traffic_limits.py
 
     # Только посмотреть без изменений:
-    python set_traffic_limits.py --dry-run
+    python scripts/set_traffic_limits.py --dry-run
 """
 
 import asyncio
@@ -18,8 +18,8 @@ import argparse
 import sys
 from pathlib import Path
 
-# Добавляем путь к приложению
-sys.path.insert(0, str(Path(__file__).parent))
+# Добавляем путь к приложению (родитель папки scripts)
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.services.remnawave import get_remnawave_service, RemnawaveError
 from app.config import get_settings
@@ -33,10 +33,10 @@ async def set_traffic_limits(dry_run: bool = False):
     traffic_limit = settings.remnawave_traffic_limit_bytes
     traffic_limit_gb = traffic_limit / (1024 ** 3)
 
-    print(f"🔧 Лимит трафика: {traffic_limit} байт ({traffic_limit_gb:.0f} ГБ)")
-    print(f"📋 Стратегия сброса: {settings.remnawave_traffic_reset_strategy}")
+    print(f"Лимит трафика: {traffic_limit} байт ({traffic_limit_gb:.0f} ГБ)")
+    print(f"Стратегия сброса: {settings.remnawave_traffic_reset_strategy}")
     if dry_run:
-        print("⚠️  DRY RUN - изменения НЕ будут применены\n")
+        print("DRY RUN - изменения НЕ будут применены\n")
     print()
 
     # Получаем всех пользователей (пагинация)
@@ -44,7 +44,7 @@ async def set_traffic_limits(dry_run: bool = False):
     start = 0
     size = 100
 
-    print("📥 Загружаем пользователей из Remnawave...")
+    print("Загружаем пользователей из Remnawave...")
 
     while True:
         try:
@@ -55,21 +55,21 @@ async def set_traffic_limits(dry_run: bool = False):
             print(f"   Загружено: {len(all_users)} пользователей...")
             start += size
         except RemnawaveError as e:
-            print(f"❌ Ошибка при получении пользователей: {e}")
+            print(f"Ошибка при получении пользователей: {e}")
             return
 
-    print(f"\n✅ Всего пользователей: {len(all_users)}")
+    print(f"\nВсего пользователей: {len(all_users)}")
 
     # Фильтруем только oblepiha_*
     oblepiha_users = [u for u in all_users if u.get("username", "").startswith("oblepiha_")]
-    print(f"🌿 Пользователей Облепихи: {len(oblepiha_users)}")
+    print(f"Пользователей Облепихи: {len(oblepiha_users)}")
 
     # Находим тех, у кого лимит = 0 (безлимит)
     users_without_limit = [u for u in oblepiha_users if u.get("trafficLimitBytes", 0) == 0]
-    print(f"⚠️  Без лимита трафика: {len(users_without_limit)}")
+    print(f"Без лимита трафика: {len(users_without_limit)}")
 
     if not users_without_limit:
-        print("\n✅ Все пользователи уже имеют лимит трафика!")
+        print("\nВсе пользователи уже имеют лимит трафика!")
         return
 
     print(f"\n{'='*60}")
@@ -80,16 +80,16 @@ async def set_traffic_limits(dry_run: bool = False):
         username = user.get("username", "???")
         uuid = user.get("uuid", "???")
         status = user.get("status", "???")
-        print(f"  • {username} ({status}) - {uuid[:8]}...")
+        print(f"  - {username} ({status}) - {uuid[:8]}...")
 
     print(f"\n{'='*60}")
 
     if dry_run:
-        print("\n⚠️  DRY RUN завершён. Запустите без --dry-run для применения изменений.")
+        print("\nDRY RUN завершён. Запустите без --dry-run для применения изменений.")
         return
 
     # Обновляем лимит трафика
-    print(f"\n🚀 Устанавливаем лимит {traffic_limit_gb:.0f} ГБ...")
+    print(f"\nУстанавливаем лимит {traffic_limit_gb:.0f} ГБ...")
 
     success_count = 0
     error_count = 0
@@ -99,24 +99,24 @@ async def set_traffic_limits(dry_run: bool = False):
         uuid = user.get("uuid")
 
         if not uuid:
-            print(f"  ⚠️  {username}: нет UUID, пропускаем")
+            print(f"  {username}: нет UUID, пропускаем")
             continue
 
         try:
             await remnawave.update_user_traffic_limit(uuid)
-            print(f"  ✅ {username}: лимит установлен")
+            print(f"  {username}: лимит установлен")
             success_count += 1
         except RemnawaveError as e:
-            print(f"  ❌ {username}: ошибка - {e}")
+            print(f"  {username}: ошибка - {e}")
             error_count += 1
 
         # Небольшая задержка чтобы не перегружать API
         await asyncio.sleep(0.1)
 
     print(f"\n{'='*60}")
-    print(f"✅ Успешно обновлено: {success_count}")
+    print(f"Успешно обновлено: {success_count}")
     if error_count:
-        print(f"❌ Ошибок: {error_count}")
+        print(f"Ошибок: {error_count}")
     print(f"{'='*60}")
 
 

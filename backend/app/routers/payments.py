@@ -67,6 +67,7 @@ async def create_payment(
         telegram_id=telegram_user.id,
         user_id=user.id,
         save_payment_method=payment_data.setup_auto_renew,
+        username=telegram_user.username,
     )
     
     if not yookassa_payment:

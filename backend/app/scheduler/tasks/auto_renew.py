@@ -146,6 +146,7 @@ async def process_auto_renewals() -> None:
                         telegram_id=user.telegram_id,
                         user_id=user.id,
                         days=AUTO_RENEW_DAYS,
+                        username=user.telegram_username,
                     )
 
                     if not yookassa_payment:
