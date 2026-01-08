@@ -20,6 +20,46 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Приглушаем шумные логгеры
+logging.getLogger("httpx").setLevel(logging.WARNING)  # Отключаем логи каждого HTTP запроса
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+
+class AccessLogFilter(logging.Filter):
+    """
+    Фильтр для uvicorn access log - пропускает только важные запросы.
+    Фильтрует частые рутинные запросы типа /api/users/me/stats.
+    """
+    # Эндпоинты которые не логируем при успешном ответе (200)
+    QUIET_ENDPOINTS = {
+        "/api/users/me/stats",
+        "/api/users/me",
+        "/api/tariffs",
+        "/health",
+        "/api/ping",
+    }
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Всегда логируем ошибки и предупреждения
+        if record.levelno >= logging.WARNING:
+            return True
+
+        # Парсим сообщение uvicorn access log
+        # Формат: "IP:PORT - "METHOD /path HTTP/1.1" STATUS"
+        message = record.getMessage()
+
+        # Если это успешный запрос (200, 304) на тихий эндпоинт - не логируем
+        for endpoint in self.QUIET_ENDPOINTS:
+            if endpoint in message and (" 200 " in message or " 304 " in message):
+                return False
+
+        return True
+
+
+# Применяем фильтр к uvicorn access логгеру
+uvicorn_access_logger = logging.getLogger("uvicorn.access")
+uvicorn_access_logger.addFilter(AccessLogFilter())
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

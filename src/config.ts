@@ -10,7 +10,7 @@ export const config = {
   
 
   // Ссылка на поддержку в Telegram
-  supportTg: import.meta.env.VITE_SUPPORT_TG || 'https://t.me/oblepiha_support',
+  supportTg: import.meta.env.VITE_SUPPORT_TG || 'https://t.me/oblepiha_helper',
 
   // Ссылка на условия пользования (страница /info в мини-аппе)
   termsUrl: import.meta.env.VITE_TERMS_URL || '/info',
