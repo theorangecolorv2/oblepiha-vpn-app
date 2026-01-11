@@ -9,7 +9,8 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc --noEmit)",
       "Bash(mkdir:*)",
-      "Bash(python -m py_compile:*)"
+      "Bash(python -m py_compile:*)",
+      "Bash(ssh:*)"
     ]
   }
 }

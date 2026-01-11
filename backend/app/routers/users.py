@@ -59,12 +59,19 @@ async def get_current_user_data(
         
         # Создаём пользователя в Remnawave
         # Формат: oblepiha_{telegram_id}_{username} или oblepiha_{telegram_id} если нет username
+        # Remnawave имеет лимит 36 символов на username
         try:
             tg_username = telegram_user.username or "-"
-            username = f"oblepiha_{telegram_user.id}_{tg_username}"
-            # Ограничиваем длину username (Remnawave может иметь лимит)
-            if len(username) > 50:
-                username = f"oblepiha_{telegram_user.id}"
+            base_prefix = f"oblepiha_{telegram_user.id}_"
+            max_tg_username_len = 36 - len(base_prefix)
+
+            if max_tg_username_len > 0:
+                # Обрезаем telegram username если он слишком длинный
+                truncated_tg_username = tg_username[:max_tg_username_len]
+                username = f"{base_prefix}{truncated_tg_username}"
+            else:
+                # На случай очень длинных telegram_id (маловероятно)
+                username = f"oblepiha_{telegram_user.id}"[:36]
             
             remnawave_user = await remnawave.create_user(
                 username=username,
