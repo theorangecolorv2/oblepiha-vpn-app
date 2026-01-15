@@ -39,5 +39,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
+    volumes:
+      # Share database with backend
+      - ./backend/data:/app/data
     depends_on:
       - backend
