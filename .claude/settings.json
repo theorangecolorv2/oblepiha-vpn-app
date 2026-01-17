@@ -1,6 +1,11 @@
 {
   "project": {
     "name": "Oblepiha VPN Mini App",
-    "description": "Telegram Mini App for VPN subscriptions"
+    "description": "Telegram Mini App for VPN subscriptions (React + FastAPI)"
+  },
+  "behavior": {
+    "productionMode": true,
+    "serverHost": "89.111.131.115",
+    "serverPath": "/opt/oblepiha-vpn-app"
   }
 }

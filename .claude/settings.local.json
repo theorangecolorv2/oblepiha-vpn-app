@@ -5,12 +5,18 @@
       "WebFetch(domain:yookassa.ru)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:oblepiha-app.ru)",
       "Bash(tree:*)",
       "Bash(npm run build:*)",
+      "Bash(npm run lint:*)",
       "Bash(npx tsc --noEmit)",
       "Bash(mkdir:*)",
       "Bash(python -m py_compile:*)",
-      "Bash(ssh:*)"
-    ]
+      "Bash(ssh:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)"
+    ],
+    "deny": []
   }
 }
