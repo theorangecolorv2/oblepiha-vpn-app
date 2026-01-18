@@ -23,6 +23,7 @@ from app.services.yookassa_service import get_yookassa_service
 from app.services.telegram_notify import (
     send_auto_renew_success,
     send_auto_renew_failed,
+    send_auto_renew_disabled,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,10 +128,19 @@ async def process_auto_renewals() -> None:
                     failed_count_for_user = len(failed_attempts.scalars().all())
 
                     if failed_count_for_user >= MAX_ATTEMPTS:
-                        logger.debug(
-                            f"Skipping user {user.telegram_id}: "
-                            f"max attempts ({MAX_ATTEMPTS}) reached"
+                        # Автоматически отключаем автопродление после MAX_ATTEMPTS неудач
+                        user.auto_renew_enabled = False
+                        logger.info(
+                            f"Auto-renew DISABLED for user {user.telegram_id} "
+                            f"after {MAX_ATTEMPTS} failed attempts"
                         )
+
+                        # Уведомляем пользователя об отключении
+                        await send_auto_renew_disabled(
+                            telegram_id=user.telegram_id,
+                            card_last4=user.card_last4,
+                        )
+
                         skipped_count += 1
                         continue
 

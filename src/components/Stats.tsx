@@ -72,8 +72,8 @@ export function Stats({
           </div>
         </div>
         
-        {/* Ненавязчивая ссылка на автопродление */}
-        {isActive && (
+        {/* Ненавязчивая ссылка на автопродление - показываем если есть способ оплаты или включено автопродление */}
+        {(hasPaymentMethod || autoRenewEnabled) && (
           <button
             onClick={() => setIsModalOpen(true)}
             className="mt-2 w-full text-center text-chocolate/40 hover:text-chocolate/60 text-xs transition-colors active:opacity-70"

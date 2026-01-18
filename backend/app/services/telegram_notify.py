@@ -234,3 +234,33 @@ async def send_subscription_expired(telegram_id: int) -> bool:
         logger.info(f"Subscription expired message sent to {telegram_id}")
     return result
 
+
+async def send_auto_renew_disabled(
+    telegram_id: int,
+    card_last4: Optional[str] = None,
+) -> bool:
+    """
+    Отправить уведомление об автоматическом отключении автопродления
+    после нескольких неудачных попыток списания.
+
+    Args:
+        telegram_id: Telegram ID пользователя
+        card_last4: Последние 4 цифры карты
+
+    Returns:
+        True если сообщение отправлено успешно
+    """
+    card_info = f" *{card_last4}" if card_last4 else ""
+
+    message = (
+        "🔕 <b>Автопродление отключено</b>\n\n"
+        f"Не удалось списать средства с карты{card_info} несколько раз подряд.\n\n"
+        "Автопродление было автоматически отключено, чтобы не беспокоить вас.\n\n"
+        "💡 Вы можете продлить подписку вручную или включить автопродление снова в приложении."
+    )
+
+    result = await _send_telegram_message(telegram_id, message, _get_app_keyboard())
+    if result:
+        logger.info(f"Auto-renew disabled message sent to {telegram_id}")
+    return result
+
