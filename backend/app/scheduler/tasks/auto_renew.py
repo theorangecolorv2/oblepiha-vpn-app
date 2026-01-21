@@ -95,12 +95,13 @@ async def process_auto_renewals() -> None:
 
             for user in users:
                 try:
-                    # Проверяем, не было ли уже успешного автоплатежа за 24 часа
+                    # Проверяем, не было ли уже успешного платежа за 24 часа
+                    # ВАЖНО: проверяем ВСЕ платежи, не только автоплатежи!
+                    # Иначе ручной платёж не заблокирует автопродление
                     recent_payment = await db.execute(
                         select(Payment).where(
                             and_(
                                 Payment.user_id == user.id,
-                                Payment.is_auto_payment == True,
                                 Payment.status == "succeeded",
                                 Payment.created_at > recent_payment_threshold,
                             )
@@ -109,7 +110,7 @@ async def process_auto_renewals() -> None:
                     if recent_payment.scalar_one_or_none():
                         logger.debug(
                             f"Skipping user {user.telegram_id}: "
-                            "recent successful auto-payment exists"
+                            "recent successful payment exists"
                         )
                         skipped_count += 1
                         continue

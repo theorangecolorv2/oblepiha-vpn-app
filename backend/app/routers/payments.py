@@ -216,13 +216,24 @@ async def yookassa_webhook(
         
         if user.remnawave_uuid:
             try:
-                await remnawave.update_user_expiration(
+                remnawave_result = await remnawave.update_user_expiration(
                     uuid=user.remnawave_uuid,
                     days_to_add=payment.days,
                 )
-                
+
                 # Обновляем статус в локальной БД
                 user.is_active = True
+
+                # Обновляем дату истечения подписки из ответа Remnawave
+                if remnawave_result and remnawave_result.get("expireAt"):
+                    try:
+                        expire_str = remnawave_result["expireAt"]
+                        user.subscription_expires_at = datetime.fromisoformat(
+                            expire_str.replace("Z", "+00:00")
+                        ).replace(tzinfo=None)
+                        logger.info(f"Updated subscription_expires_at for user {user.telegram_id}: {user.subscription_expires_at}")
+                    except (ValueError, KeyError) as e:
+                        logger.warning(f"Failed to parse expireAt from Remnawave: {e}")
 
                 # Отмечаем использование пробного периода если это был trial
                 if payment.tariff_id == "trial":
