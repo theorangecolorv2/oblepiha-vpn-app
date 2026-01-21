@@ -275,6 +275,10 @@ async def process_auto_renewals() -> None:
                             f"status: {yookassa_payment.status}"
                         )
 
+                    # Коммитим изменения для этого пользователя сразу,
+                    # чтобы webhook мог найти платёж в БД
+                    await db.commit()
+
                     # Пауза между пользователями
                     await asyncio.sleep(PROCESS_DELAY_MS / 1000)
 
