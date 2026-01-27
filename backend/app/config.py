@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     # Telegram
     telegram_bot_token: str
+    telegram_bot_username: str = "oblepiha_vpn_bot"  # Username бота без @
 
     # Remnawave Panel
     remnawave_api_url: str
@@ -49,9 +50,11 @@ class Settings(BaseSettings):
     # YooKassa
     yookassa_shop_id: str
     yookassa_secret_key: str
-    # Редирект после оплаты - открывает чат с ботом
+    # Редирект после оплаты - формируется автоматически из telegram_bot_username
     # ?start=payment_success позволяет боту обработать возврат после оплаты
-    yookassa_return_url: str = "https://t.me/oblepiha_bot?start=payment_success"
+    @property
+    def yookassa_return_url(self) -> str:
+        return f"https://t.me/{self.telegram_bot_username}?start=payment_success"
 
     # Frontend
     frontend_url: str = "https://oblepiha-app.ru"

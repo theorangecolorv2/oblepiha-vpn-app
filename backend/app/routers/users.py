@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db
 from app.middleware.auth import get_current_user, TelegramUser
 from app.models.user import User
@@ -504,7 +505,7 @@ async def get_referral_stats(
 
     return ReferralStatsResponse(
         referral_code=user.referral_code or "",
-        referral_link=f"https://t.me/oblepiha_bot?start=ref_{user.referral_code}" if user.referral_code else "",
+        referral_link=f"https://t.me/{get_settings().telegram_bot_username}?start=ref_{user.referral_code}" if user.referral_code else "",
         total_invited=total_invited,
         total_purchased=total_purchased,
         total_bonus_days=total_bonus_days,
