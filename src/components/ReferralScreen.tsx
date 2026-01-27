@@ -100,7 +100,7 @@ export function ReferralScreen() {
       {/* Описание */}
       <div className="bg-primary/5 rounded-2xl p-4 mb-6">
         <p className="text-chocolate/80 text-sm leading-relaxed">
-          {STRINGS.REFERRAL_DESCRIPTION}
+          Когда приглашённый вами пользователь оформит подписку на месяц или более, вы получите <span className="font-bold text-primary">10 дней</span> бесплатно.
         </p>
       </div>
 

@@ -48,8 +48,8 @@ export const STRINGS = {
   REFERRAL_SHARE_BUTTON: 'Поделиться',
   REFERRAL_COPY_BUTTON: 'Скопировать ссылку',
   REFERRAL_LINK_COPIED: 'Скопировано!',
-  REFERRAL_EARN_MORE: 'Хотите зарабатывать?',
-  REFERRAL_EARN_MORE_TITLE: 'Хотите зарабатывать?',
+  REFERRAL_EARN_MORE: 'Хочу получать деньги вместо бонусных дней',
+  REFERRAL_EARN_MORE_TITLE: 'Хотите получать деньги?',
   REFERRAL_EARN_MORE_TEXT: 'Если вы хотите приглашать пользователей и получать вознаграждение, напишите нам — мы предложим выгодные условия сотрудничества.',
   REFERRAL_EARN_MORE_BUTTON: 'Написать в поддержку',
 
