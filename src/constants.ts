@@ -39,18 +39,18 @@ export const STRINGS = {
   KEY_COPIED: 'Ключ скопирован в буфер обмена',
 
   // Экран рефералов
-  REFERRAL_TITLE: 'Приглашай друзей',
-  REFERRAL_SUBTITLE: 'Получай +10 дней за каждого друга',
-  REFERRAL_DESCRIPTION: 'Когда твой друг купит подписку на месяц или больше, ты получишь 10 дней бесплатно!',
+  REFERRAL_TITLE: 'Приглашайте друзей',
+  REFERRAL_SUBTITLE: '+10 дней за каждого приглашённого',
+  REFERRAL_DESCRIPTION: 'Когда приглашённый вами пользователь оформит подписку на месяц или более, вы получите 10 дней бесплатно.',
   REFERRAL_STATS_INVITED: 'Приглашено',
   REFERRAL_STATS_PURCHASED: 'Купили',
   REFERRAL_STATS_EARNED: 'Дней',
-  REFERRAL_SHARE_BUTTON: 'Поделиться ссылкой',
-  REFERRAL_COPY_BUTTON: 'Скопировать',
+  REFERRAL_SHARE_BUTTON: 'Поделиться',
+  REFERRAL_COPY_BUTTON: 'Скопировать ссылку',
   REFERRAL_LINK_COPIED: 'Скопировано!',
-  REFERRAL_EARN_MORE: 'Хочу заработать',
-  REFERRAL_EARN_MORE_TITLE: 'Хочешь заработать?',
-  REFERRAL_EARN_MORE_TEXT: 'Хочешь приглашать друзей и получать деньги? Напиши нам — мы быстро ответим и предложим хорошие условия. Заработать может каждый!',
+  REFERRAL_EARN_MORE: 'Хотите зарабатывать?',
+  REFERRAL_EARN_MORE_TITLE: 'Хотите зарабатывать?',
+  REFERRAL_EARN_MORE_TEXT: 'Если вы хотите приглашать пользователей и получать вознаграждение, напишите нам — мы предложим выгодные условия сотрудничества.',
   REFERRAL_EARN_MORE_BUTTON: 'Написать в поддержку',
 
   // Ошибки

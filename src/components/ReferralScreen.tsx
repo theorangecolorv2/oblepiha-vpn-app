@@ -30,7 +30,7 @@ export function ReferralScreen() {
   const handleShare = () => {
     if (!stats) return
 
-    const text = 'Попробуй Облепиха VPN! Быстрый и надёжный VPN для всей семьи'
+    const text = 'Попробуйте Облепиха VPN — быстрый и надёжный VPN'
     const tg = window.Telegram?.WebApp
 
     if (tg?.openTelegramLink) {
