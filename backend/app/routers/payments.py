@@ -12,15 +12,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_tariff_by_id
+from app.config import get_tariff_by_id, REFERRAL_BONUS_DAYS, REFERRAL_QUALIFYING_TARIFFS
 from app.database import get_db
 from app.middleware.auth import get_current_user, TelegramUser
 from app.models.user import User
 from app.models.payment import Payment
+from app.models.referral import ReferralReward
 from app.schemas.payment import PaymentCreate, PaymentResponse, PaymentHistoryItem
 from app.services.remnawave import get_remnawave_service, RemnawaveError
 from app.services.yookassa_service import get_yookassa_service
-from app.services.telegram_notify import send_payment_success_message
+from app.services.telegram_notify import send_payment_success_message, send_referral_bonus_message
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/payments", tags=["payments"])
@@ -59,7 +60,19 @@ async def create_payment(
             status_code=400,
             detail="Trial period can only be used once"
         )
-    
+
+    # Получаем информацию о реферере для description платежа
+    referrer_username = None
+    referrer_telegram_id = None
+    if user.referrer_id:
+        referrer_result = await db.execute(
+            select(User).where(User.telegram_id == user.referrer_id)
+        )
+        referrer = referrer_result.scalar_one_or_none()
+        if referrer:
+            referrer_username = referrer.telegram_username
+            referrer_telegram_id = referrer.telegram_id
+
     # Создаём платёж в YooKassa
     # save_payment_method=True ограничивает способы оплаты до тех, что поддерживают сохранение
     yookassa_payment = yookassa.create_payment(
@@ -68,6 +81,8 @@ async def create_payment(
         user_id=user.id,
         save_payment_method=payment_data.setup_auto_renew,
         username=telegram_user.username,
+        referrer_username=referrer_username,
+        referrer_telegram_id=referrer_telegram_id,
     )
     
     if not yookassa_payment:
@@ -276,14 +291,67 @@ async def yookassa_webhook(
                 logger.info(
                     f"Subscription extended: user={user.telegram_id}, days={payment.days}"
                 )
-                
+
                 # Отправляем уведомление пользователю
                 await send_payment_success_message(
                     telegram_id=user.telegram_id,
                     days=payment.days,
                     tariff_name=payment.tariff_name,
                 )
-                
+
+                # === РЕФЕРАЛЬНЫЙ БОНУС ===
+                # Условия: тариф не trial, у пользователя есть referrer_id, бонус ещё не начислялся
+                if (
+                    payment.tariff_id in REFERRAL_QUALIFYING_TARIFFS
+                    and user.referrer_id
+                ):
+                    # Проверяем, не начислялся ли уже бонус за этого реферала
+                    existing_reward = await db.execute(
+                        select(ReferralReward).where(ReferralReward.referred_user_id == user.id)
+                    )
+                    if not existing_reward.scalar_one_or_none():
+                        # Находим реферера
+                        referrer_result = await db.execute(
+                            select(User).where(User.telegram_id == user.referrer_id)
+                        )
+                        referrer = referrer_result.scalar_one_or_none()
+
+                        if referrer and referrer.remnawave_uuid:
+                            try:
+                                # Начисляем бонус рефереру в Remnawave
+                                await remnawave.update_user_expiration(
+                                    uuid=referrer.remnawave_uuid,
+                                    days_to_add=REFERRAL_BONUS_DAYS,
+                                )
+
+                                # Записываем в таблицу бонусов
+                                reward = ReferralReward(
+                                    referrer_user_id=referrer.id,
+                                    referred_user_id=user.id,
+                                    payment_id=payment.id,
+                                    bonus_days=REFERRAL_BONUS_DAYS,
+                                )
+                                db.add(reward)
+
+                                # Отправляем уведомление рефереру
+                                await send_referral_bonus_message(
+                                    telegram_id=referrer.telegram_id,
+                                    referred_name=user.first_name or user.telegram_username or "Друг",
+                                    bonus_days=REFERRAL_BONUS_DAYS,
+                                )
+
+                                logger.info(
+                                    f"Referral bonus granted: +{REFERRAL_BONUS_DAYS} days to user {referrer.telegram_id} "
+                                    f"for referral {user.telegram_id}"
+                                )
+
+                            except RemnawaveError as e:
+                                logger.error(f"Failed to grant referral bonus: {e}")
+                        else:
+                            logger.warning(
+                                f"Cannot grant referral bonus: referrer {user.referrer_id} not found or no remnawave_uuid"
+                            )
+
             except RemnawaveError as e:
                 logger.error(f"Failed to extend subscription in Remnawave: {e}")
                 # Платёж прошёл, но Remnawave не обновился

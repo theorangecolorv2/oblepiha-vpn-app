@@ -39,9 +39,19 @@ export const STRINGS = {
   KEY_COPIED: 'Ключ скопирован в буфер обмена',
 
   // Экран рефералов
-  REFERRAL_TITLE: 'Реферальная программа',
-  REFERRAL_DESCRIPTION: 'Мы работаем над реферальной системой. Скоро вы сможете приглашать друзей и получать бонусы!',
-  COMING_SOON: 'Скоро',
+  REFERRAL_TITLE: 'Приглашай друзей',
+  REFERRAL_SUBTITLE: 'Получай +10 дней за каждого друга',
+  REFERRAL_DESCRIPTION: 'Когда твой друг купит подписку на месяц или больше, ты получишь 10 дней бесплатно!',
+  REFERRAL_STATS_INVITED: 'Приглашено',
+  REFERRAL_STATS_PURCHASED: 'Купили',
+  REFERRAL_STATS_EARNED: 'Дней',
+  REFERRAL_SHARE_BUTTON: 'Поделиться ссылкой',
+  REFERRAL_COPY_BUTTON: 'Скопировать',
+  REFERRAL_LINK_COPIED: 'Скопировано!',
+  REFERRAL_EARN_MORE: 'Хочу заработать',
+  REFERRAL_EARN_MORE_TITLE: 'Хочешь заработать?',
+  REFERRAL_EARN_MORE_TEXT: 'Хочешь приглашать друзей и получать деньги? Напиши нам — мы быстро ответим и предложим хорошие условия. Заработать может каждый!',
+  REFERRAL_EARN_MORE_BUTTON: 'Написать в поддержку',
 
   // Ошибки
   ERROR_NO_SUBSCRIPTION: 'Нет активной подписки',

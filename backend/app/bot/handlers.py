@@ -28,11 +28,22 @@ def get_start_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
+def get_referral_keyboard(referral_code: str) -> InlineKeyboardMarkup:
+    """Клавиатура с кнопкой открытия Mini App с реферальным кодом"""
+    app_url = f"{MINI_APP_URL}?ref={referral_code}"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="🍊 Открыть Облепиха VPN",
+            web_app=WebAppInfo(url=app_url)
+        )]
+    ])
+
+
 @router.message(CommandStart(deep_link=True))
 async def cmd_start_with_param(message: Message, command: CommandObject):
-    """Обработка /start с параметром (например, после оплаты)"""
+    """Обработка /start с параметром (например, после оплаты или реферальная ссылка)"""
     param = command.args
-    
+
     if param == "payment_success":
         # После успешной оплаты
         await message.answer(
@@ -40,6 +51,21 @@ async def cmd_start_with_param(message: Message, command: CommandObject):
             "Ваша подписка активирована. Приятного пользования! 🎉\n\n"
             "💡 <i>Если дни не отобразились — просто перезапустите приложение.</i>",
             reply_markup=get_start_keyboard(),
+            parse_mode="HTML"
+        )
+    elif param and param.startswith("ref_"):
+        # Реферальная ссылка
+        referral_code = param[4:]  # Убираем "ref_"
+        user_name = message.from_user.first_name or "друг"
+
+        await message.answer(
+            f"👋 Привет, <b>{user_name}</b>!\n\n"
+            "🍊 Тебя пригласил друг в <b>Облепиха VPN</b> — быстрый и надёжный VPN для всей семьи.\n\n"
+            "• Безлимит устройств\n"
+            "• 500 ГБ трафика в месяц\n"
+            "• Простая настройка\n\n"
+            "Нажми кнопку ниже, чтобы начать 👇",
+            reply_markup=get_referral_keyboard(referral_code),
             parse_mode="HTML"
         )
     else:

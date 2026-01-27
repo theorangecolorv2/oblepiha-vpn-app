@@ -29,13 +29,15 @@ class YooKassaService:
         telegram_id: int,
         username: Optional[str] = None,
         is_auto: bool = False,
+        referrer_username: Optional[str] = None,
+        referrer_telegram_id: Optional[int] = None,
     ) -> str:
         """
         Формирует description для платежа YooKassa.
 
         Формат:
-        - Ручной платёж: "Облепиха VPN - {тариф} | {tg_id} | @{username}"
-        - Автопродление: "Облепиха VPN - Авто | {tg_id} | @{username}"
+        - Ручной платёж: "{тариф} | {tg_id} | @{username} | пригласил: @{referrer}"
+        - Автопродление: "Авто | {tg_id} | @{username}"
 
         YooKassa ограничивает description до 128 символов.
         Если username отсутствует - не добавляем.
@@ -45,16 +47,18 @@ class YooKassaService:
             telegram_id: Telegram ID пользователя
             username: Telegram username (опционально)
             is_auto: Это автопродление
+            referrer_username: Username реферера (опционально)
+            referrer_telegram_id: Telegram ID реферера (опционально)
 
         Returns:
             Строка description (макс 128 символов)
         """
         try:
-            # Базовая часть
+            # Базовая часть (без "Облепиха VPN")
             if is_auto:
-                base = "Облепиха VPN - Авто"
+                base = "Авто"
             else:
-                base = f"Облепиха VPN - {tariff_name}"
+                base = tariff_name
 
             # Добавляем telegram_id
             parts = [base, str(telegram_id)]
@@ -64,6 +68,13 @@ class YooKassaService:
                 # Убираем @ если уже есть, и добавляем свой
                 clean_username = username.lstrip("@")
                 parts.append(f"@{clean_username}")
+
+            # Добавляем информацию о реферере
+            if referrer_username:
+                clean_referrer = referrer_username.lstrip("@")
+                parts.append(f"пригласил: @{clean_referrer}")
+            elif referrer_telegram_id:
+                parts.append(f"пригласил: {referrer_telegram_id}")
 
             description = " | ".join(parts)
 
@@ -77,8 +88,8 @@ class YooKassaService:
             # Fallback на минимальное description - платёж не должен упасть
             logger.warning(f"Error building payment description: {e}")
             if is_auto:
-                return f"Облепиха VPN - Авто | {telegram_id}"
-            return f"Облепиха VPN - {tariff_name}"
+                return f"Авто | {telegram_id}"
+            return f"{tariff_name} | {telegram_id}"
 
     def create_payment(
         self,
@@ -87,6 +98,8 @@ class YooKassaService:
         user_id: int,
         save_payment_method: bool = False,
         username: Optional[str] = None,
+        referrer_username: Optional[str] = None,
+        referrer_telegram_id: Optional[int] = None,
     ) -> Optional[YKPaymentResponse]:
         """
         Создать платёж в YooKassa.
@@ -99,6 +112,8 @@ class YooKassaService:
                 ВАЖНО: если True, ЮКасса покажет только способы оплаты,
                 поддерживающие сохранение (карты, СБП с поддержкой, SberPay, T-Pay).
             username: Telegram username (опционально, для аналитики)
+            referrer_username: Username реферера (опционально, для аналитики)
+            referrer_telegram_id: Telegram ID реферера (опционально, для аналитики)
 
         Returns:
             Объект платежа YooKassa или None
@@ -117,13 +132,15 @@ class YooKassaService:
             }
 
             # Формируем description для аналитики
-            # Формат: "Облепиха VPN - {тариф} | {tg_id} | @{username}"
+            # Формат: "{тариф} | {tg_id} | @{username} | пригласил: @{referrer}"
             # YooKassa ограничивает description до 128 символов
             description = self._build_description(
                 tariff_name=tariff["name"],
                 telegram_id=telegram_id,
                 username=username,
                 is_auto=False,
+                referrer_username=referrer_username,
+                referrer_telegram_id=referrer_telegram_id,
             )
 
             payment_data = {

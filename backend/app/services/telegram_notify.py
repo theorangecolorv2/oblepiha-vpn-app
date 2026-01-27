@@ -264,3 +264,31 @@ async def send_auto_renew_disabled(
         logger.info(f"Auto-renew disabled message sent to {telegram_id}")
     return result
 
+
+async def send_referral_bonus_message(
+    telegram_id: int,
+    referred_name: str,
+    bonus_days: int,
+) -> bool:
+    """
+    Отправить уведомление о начислении реферального бонуса.
+
+    Args:
+        telegram_id: Telegram ID реферера (кто получает бонус)
+        referred_name: Имя реферала (кто купил подписку)
+        bonus_days: Количество бонусных дней
+
+    Returns:
+        True если сообщение отправлено успешно
+    """
+    message = (
+        f"🎉 <b>Твой друг {referred_name} купил подписку!</b>\n\n"
+        f"📅 +{bonus_days} дней добавлено к твоей подписке.\n\n"
+        "Приглашай ещё друзей и получай бонусы!"
+    )
+
+    result = await _send_telegram_message(telegram_id, message, _get_app_keyboard())
+    if result:
+        logger.info(f"Referral bonus message sent to {telegram_id}")
+    return result
+

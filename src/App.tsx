@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Header, Stats, TariffCard, Button, BottomNav, ConnectionScreen, ReferralScreen, TermsAgreementModal } from './components'
 import { useTelegram } from './hooks/useTelegram'
 import { useUser } from './hooks/useUser'
 import { tariffs as fallbackTariffs } from './data/tariffs'
+import { api } from './api'
 import type { Tariff } from './types'
 
 function App() {
@@ -33,6 +34,28 @@ function App() {
 
   // Состояние для ошибки платежа
   const [paymentError, setPaymentError] = useState<string | null>(null)
+
+  // Обработка реферальной ссылки при первом входе
+  const referrerProcessed = useRef(false)
+  useEffect(() => {
+    if (referrerProcessed.current || !user) return
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const refCode = urlParams.get('ref')
+
+    if (refCode) {
+      referrerProcessed.current = true
+      api.setReferrer(refCode)
+        .then(result => {
+          if (result.status === 'ok') {
+            console.log('[Referral] Referrer set:', result.referrerName)
+          } else {
+            console.log('[Referral] Set referrer status:', result.status)
+          }
+        })
+        .catch(err => console.error('[Referral] Failed to set referrer:', err))
+    }
+  }, [user])
 
   // Проверка согласия с условиями перед оплатой
   const handlePayment = async () => {

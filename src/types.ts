@@ -16,3 +16,11 @@ export interface UserData {
 
 export type VpnStatus = 'active' | 'inactive' | 'connecting'
 
+export interface ReferralStats {
+  referralCode: string
+  referralLink: string
+  totalInvited: number
+  totalPurchased: number
+  totalBonusDays: number
+}
+

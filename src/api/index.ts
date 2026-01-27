@@ -3,7 +3,7 @@
  */
 
 import { config } from '../config'
-import type { Tariff } from '../types'
+import type { Tariff, ReferralStats } from '../types'
 
 // Типы ответов API
 export interface UserStats {
@@ -208,6 +208,26 @@ export const api = {
   async deletePaymentMethod(): Promise<{ status: string }> {
     return apiFetch('/api/users/me/auto-renew/payment-method', {
       method: 'DELETE',
+    })
+  },
+
+  /**
+   * Получить статистику реферальной программы
+   */
+  async getReferralStats(): Promise<ReferralStats> {
+    return apiFetch<ReferralStats>('/api/users/me/referrals')
+  },
+
+  /**
+   * Установить реферера (при переходе по реферальной ссылке)
+   */
+  async setReferrer(referralCode: string): Promise<{
+    status: string
+    referrerName?: string
+  }> {
+    return apiFetch('/api/users/me/set-referrer', {
+      method: 'POST',
+      body: JSON.stringify({ referralCode }),
     })
   },
 }

@@ -8,13 +8,14 @@ import secrets
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user, TelegramUser
 from app.models.user import User
-from app.schemas.user import UserResponse, UserStatsResponse
+from app.models.referral import ReferralReward
+from app.schemas.user import UserResponse, UserStatsResponse, SetReferrerRequest, ReferralStatsResponse
 from app.services.remnawave import get_remnawave_service, RemnawaveError
 
 logger = logging.getLogger(__name__)
@@ -405,4 +406,107 @@ async def delete_payment_method(
     logger.info(f"Payment method deleted for user {telegram_user.id}")
 
     return {"status": "ok"}
+
+
+# === Реферальная программа ===
+
+
+@router.post("/me/set-referrer")
+async def set_referrer(
+    request: SetReferrerRequest,
+    telegram_user: TelegramUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Установить реферера для пользователя.
+
+    Вызывается при первом открытии Mini App по реферальной ссылке.
+    Привязка работает только один раз - если referrer_id уже установлен,
+    запрос игнорируется.
+    """
+    # Находим текущего пользователя
+    result = await db.execute(
+        select(User).where(User.telegram_id == telegram_user.id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Если реферер уже установлен - игнорируем
+    if user.referrer_id:
+        return {"status": "already_set"}
+
+    # Находим владельца реферального кода
+    referral_code = request.referral_code.upper().strip()
+    referrer_result = await db.execute(
+        select(User).where(User.referral_code == referral_code)
+    )
+    referrer = referrer_result.scalar_one_or_none()
+
+    if not referrer:
+        logger.warning(f"Invalid referral code: {referral_code}")
+        return {"status": "invalid_code"}
+
+    # Нельзя быть своим же рефералом
+    if referrer.id == user.id:
+        return {"status": "self_referral"}
+
+    # Привязываем реферера (сохраняем telegram_id реферера)
+    user.referrer_id = referrer.telegram_id
+    await db.commit()
+
+    logger.info(f"User {telegram_user.id} set referrer to {referrer.telegram_id} (code: {referral_code})")
+
+    return {"status": "ok", "referrer_name": referrer.first_name}
+
+
+@router.get("/me/referrals", response_model=ReferralStatsResponse)
+async def get_referral_stats(
+    telegram_user: TelegramUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Получить статистику реферальной программы.
+
+    Возвращает:
+    - referral_code: реферальный код пользователя
+    - referral_link: полная ссылка для приглашения
+    - total_invited: сколько людей пришло по ссылке
+    - total_purchased: сколько из них купили подписку (и принесли бонус)
+    - total_bonus_days: сколько дней заработано на рефералах
+    """
+    # Находим пользователя
+    result = await db.execute(
+        select(User).where(User.telegram_id == telegram_user.id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Количество приглашённых (у кого referrer_id = мой telegram_id)
+    invited_result = await db.execute(
+        select(func.count()).select_from(User).where(User.referrer_id == telegram_user.id)
+    )
+    total_invited = invited_result.scalar() or 0
+
+    # Количество купивших и сумма бонусных дней (из таблицы referral_rewards)
+    rewards_result = await db.execute(
+        select(
+            func.count(ReferralReward.id),
+            func.coalesce(func.sum(ReferralReward.bonus_days), 0)
+        ).where(ReferralReward.referrer_user_id == user.id)
+    )
+    row = rewards_result.one()
+    total_purchased = row[0] or 0
+    total_bonus_days = row[1] or 0
+
+    return ReferralStatsResponse(
+        referral_code=user.referral_code or "",
+        referral_link=f"https://t.me/oblepiha_bot?start=ref_{user.referral_code}" if user.referral_code else "",
+        total_invited=total_invited,
+        total_purchased=total_purchased,
+        total_bonus_days=total_bonus_days,
+    )
 

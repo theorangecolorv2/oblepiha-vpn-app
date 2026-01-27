@@ -100,3 +100,8 @@ def get_tariff_by_id(tariff_id: str) -> dict | None:
             return tariff
     return None
 
+
+# Реферальная программа
+REFERRAL_BONUS_DAYS = 10  # Бонус владельцу ссылки за каждого реферала
+REFERRAL_QUALIFYING_TARIFFS = ["month", "quarter"]  # Тарифы, за которые начисляется бонус (не trial)
+

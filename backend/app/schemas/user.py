@@ -82,11 +82,29 @@ class UserResponse(BaseModel):
 class UserStatsResponse(BaseModel):
     """Статистика пользователя для главного экрана"""
     model_config = camel_config
-    
+
     is_active: bool = False
     days_left: int = 0
     total_days: int = 30
     traffic_left_gb: float = 0
     total_traffic_gb: float = 500
     subscription_url: Optional[str] = None
+
+
+class SetReferrerRequest(BaseModel):
+    """Запрос на установку реферера"""
+    model_config = camel_config
+
+    referral_code: str
+
+
+class ReferralStatsResponse(BaseModel):
+    """Статистика реферальной программы пользователя"""
+    model_config = camel_config
+
+    referral_code: str
+    referral_link: str
+    total_invited: int = 0
+    total_purchased: int = 0
+    total_bonus_days: int = 0
 
