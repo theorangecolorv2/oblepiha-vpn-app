@@ -191,6 +191,31 @@ async def check_channel_subscription(callback: CallbackQuery):
                 show_alert=True
             )
 
+            # Обновляем сообщение: убираем кнопки подписки, меняем текст
+            new_text = """👥 <b>Новое: Реферальная программа!</b>
+
+Приглашайте друзей и получайте бонусные дни или деньги. Подробности во вкладке «Рефералы».
+
+🎁 <b>Бонус получен!</b>
+
+Спасибо за подписку на канал! Вам начислено <b>{days} дня</b> подписки.""".format(days=bonus_days)
+
+            new_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(
+                    text="🍊 Открыть Облепиха VPN",
+                    web_app=WebAppInfo(url=MINI_APP_URL)
+                )]
+            ])
+
+            try:
+                await callback.message.edit_text(
+                    text=new_text,
+                    reply_markup=new_keyboard,
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to edit message after bonus: {e}")
+
             logger.info(f"Channel bonus granted to user {user_id}: {bonus_days} days")
 
     except Exception as e:
