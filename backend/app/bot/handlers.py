@@ -3,16 +3,27 @@
 """
 
 import logging
+import random
+from datetime import datetime
+
 from aiogram import Router, F
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.filters import CommandStart, CommandObject
+from aiogram.enums import ChatMemberStatus
+from sqlalchemy import select
 
 from app.config import get_settings
+from app.database import async_session_maker
+from app.models.user import User
+from app.services.remnawave import get_remnawave_service
 
 logger = logging.getLogger(__name__)
 router = Router()
 
 settings = get_settings()
+
+# Канал для проверки подписки
+CHANNEL_USERNAME = "Oblepiha_Channel"
 
 # URL Mini App
 MINI_APP_URL = settings.frontend_url
@@ -97,4 +108,95 @@ async def any_message(message: Message):
         "🍊 Для управления подпиской используй приложение 👇",
         reply_markup=get_start_keyboard()
     )
+
+
+@router.callback_query(F.data == "check_channel_subscription")
+async def check_channel_subscription(callback: CallbackQuery):
+    """Проверка подписки на канал и начисление бонуса"""
+    user_id = callback.from_user.id
+    bot = callback.bot
+
+    try:
+        # Проверяем подписку на канал
+        member = await bot.get_chat_member(chat_id=f"@{CHANNEL_USERNAME}", user_id=user_id)
+
+        is_subscribed = member.status in [
+            ChatMemberStatus.MEMBER,
+            ChatMemberStatus.ADMINISTRATOR,
+            ChatMemberStatus.CREATOR
+        ]
+
+        if not is_subscribed:
+            await callback.answer(
+                "❌ Вы не подписаны на канал. Подпишитесь и попробуйте снова.",
+                show_alert=True
+            )
+            return
+
+        # Проверяем, получал ли уже бонус
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(User).where(User.telegram_id == user_id)
+            )
+            user = result.scalar_one_or_none()
+
+            if not user:
+                await callback.answer(
+                    "❌ Пользователь не найден. Откройте приложение для регистрации.",
+                    show_alert=True
+                )
+                return
+
+            if user.channel_bonus_received_at:
+                await callback.answer(
+                    "ℹ️ Вы уже получили бонус за подписку на канал.",
+                    show_alert=True
+                )
+                return
+
+            # Начисляем бонус: 2-3 дня случайно
+            bonus_days = random.randint(2, 3)
+
+            # Обновляем подписку в Remnawave
+            if user.remnawave_uuid:
+                try:
+                    remnawave = get_remnawave_service()
+                    updated_user = await remnawave.update_user_expiration(
+                        uuid=user.remnawave_uuid,
+                        days_to_add=bonus_days
+                    )
+
+                    # Обновляем локальную БД
+                    new_expire = updated_user.get("expireAt")
+                    if new_expire:
+                        user.subscription_expires_at = datetime.fromisoformat(
+                            new_expire.replace("Z", "+00:00")
+                        ).replace(tzinfo=None)
+                        user.is_active = True
+
+                except Exception as e:
+                    logger.error(f"Failed to update Remnawave subscription for user {user_id}: {e}")
+                    await callback.answer(
+                        "❌ Ошибка при начислении бонуса. Попробуйте позже.",
+                        show_alert=True
+                    )
+                    return
+
+            # Отмечаем получение бонуса
+            user.channel_bonus_received_at = datetime.utcnow()
+            await session.commit()
+
+            await callback.answer(
+                f"🎉 Вам начислено {bonus_days} дня подписки!",
+                show_alert=True
+            )
+
+            logger.info(f"Channel bonus granted to user {user_id}: {bonus_days} days")
+
+    except Exception as e:
+        logger.error(f"Error checking channel subscription for user {user_id}: {e}")
+        await callback.answer(
+            "❌ Произошла ошибка. Попробуйте позже.",
+            show_alert=True
+        )
 

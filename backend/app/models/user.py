@@ -49,6 +49,9 @@ class User(Base):
     # Пробный период
     trial_used: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Бонус за подписку на канал
+    channel_bonus_received_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     # Автопродление подписки
     auto_renew_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     payment_method_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
