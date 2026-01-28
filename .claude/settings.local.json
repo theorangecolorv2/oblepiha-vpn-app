@@ -17,7 +17,10 @@
       "Bash(git log:*)",
       "Bash(git diff:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(python -c:*)",
+      "Bash(python extend_subs.py:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
