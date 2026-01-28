@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.database import init_db
 from app.routers import users_router, payments_router, tariffs_router
+from app.routers.admin import router as admin_router
 
 # Настройка логирования
 logging.basicConfig(
@@ -102,6 +103,7 @@ app.add_middleware(
 app.include_router(users_router)
 app.include_router(payments_router)
 app.include_router(tariffs_router)
+app.include_router(admin_router)
 
 
 @app.get("/")

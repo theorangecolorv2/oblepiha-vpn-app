@@ -8,11 +8,11 @@ from datetime import datetime
 
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-from aiogram.filters import CommandStart, CommandObject
+from aiogram.filters import CommandStart, CommandObject, Command
 from aiogram.enums import ChatMemberStatus
 from sqlalchemy import select
 
-from app.config import get_settings
+from app.config import get_settings, ADMIN_IDS
 from app.database import async_session_maker
 from app.models.user import User
 from app.services.remnawave import get_remnawave_service
@@ -27,6 +27,9 @@ CHANNEL_USERNAME = "Oblepiha_Channel"
 
 # URL Mini App
 MINI_APP_URL = settings.frontend_url
+
+# URL Admin Panel
+ADMIN_APP_URL = f"{settings.frontend_url}/admin/"
 
 
 def get_start_keyboard() -> InlineKeyboardMarkup:
@@ -98,6 +101,29 @@ async def cmd_start(message: Message):
         "Нажми кнопку ниже, чтобы начать 👇",
         reply_markup=get_start_keyboard(),
         parse_mode="HTML"
+    )
+
+
+@router.message(Command("admin"))
+async def cmd_admin(message: Message):
+    """Команда /admin - доступ к админ-панели"""
+    user_id = message.from_user.id
+
+    if user_id not in ADMIN_IDS:
+        await message.answer("⛔ У вас нет доступа к админ-панели.")
+        return
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="📊 Открыть аналитику",
+            web_app=WebAppInfo(url=ADMIN_APP_URL)
+        )]
+    ])
+
+    await message.answer(
+        "👋 Привет, админ!\n\n"
+        "Нажми кнопку ниже для доступа к аналитике 👇",
+        reply_markup=keyboard
     )
 
 

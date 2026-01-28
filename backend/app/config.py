@@ -108,3 +108,6 @@ def get_tariff_by_id(tariff_id: str) -> dict | None:
 REFERRAL_BONUS_DAYS = 10  # Бонус владельцу ссылки за каждого реферала
 REFERRAL_QUALIFYING_TARIFFS = ["month", "quarter"]  # Тарифы, за которые начисляется бонус (не trial)
 
+# Админские Telegram ID
+ADMIN_IDS = {762967142, 1035478376}
+
